@@ -1,6 +1,6 @@
 """
 TELEGRAM-БОТ ДЛЯ РАСПРЕДЕЛЕНИЯ КЛАССИЧЕСКОЙ МУЗЫКИ ПО ЭПОХАМ
-Версия: Bothost (с плейлистами Apple Music, Яндекс Музыка, Spotify)
+Версия: Bothost (с универсальными ссылками на поиск в Apple Music, Яндекс Музыка, Spotify)
 """
 
 import os
@@ -8,7 +8,7 @@ import re
 import logging
 import urllib.parse
 from datetime import datetime
-from typing import Dict, Optional, Tuple, List
+from typing import Dict, Optional, Tuple
 
 from telegram import Update, InlineKeyboardButton, InlineKeyboardMarkup
 from telegram.ext import Application, CommandHandler, MessageHandler, filters, ContextTypes, CallbackQueryHandler
@@ -287,151 +287,37 @@ COMPOSERS_DB = {
     "макс рихтер": {"era": "contemporary", "birth": 1969, "death": None},
 }
 
-# ===================== СПРАВОЧНИК ПЛЕЙЛИСТОВ =====================
-# Формат: "имя_композитора_для_поиска": {"apple": "url", "yandex": "url", "spotify": "url"}
-# Здесь хранятся ссылки на официальные плейлисты по композиторам
-
-PLAYLISTS = {
-    # Apple Music плейлисты (официальные)
-    "bach": {
-        "apple": "https://music.apple.com/ru/playlist/pl.9a6c98b486ed4bfa970918a0fd47b43c",
-        "spotify": "https://open.spotify.com/playlist/37i9dQZF1DX4sWSpwq3LiO",  # This Is Bach
-    },
-    "beethoven": {
-        "apple": "https://music.apple.com/ru/playlist/pl.70ed5f9f3f50411d9d35605b3df8e559",
-        "spotify": "https://open.spotify.com/playlist/37i9dQZF1DX3YSRoTd8Bm6",  # This Is Beethoven
-    },
-    "mozart": {
-        "apple": "https://music.apple.com/ru/playlist/pl.fd4a201bef5f487a92b192d2351f7838",
-        "spotify": "https://open.spotify.com/playlist/37i9dQZF1DX1dJnFdIx1P3",  # This Is Mozart
-    },
-    "tchaikovsky": {
-        "apple": "https://music.apple.com/ru/playlist/pl.32513146314b4b4b9dab75bfad573b94",
-        "spotify": "https://open.spotify.com/playlist/37i9dQZF1DWTAlXLF2C01E",  # This Is Tchaikovsky
-    },
-    "rachmaninoff": {
-        "apple": "https://music.apple.com/ru/playlist/pl.4837ce8c3b5244edba580d962143b733",
-        "spotify": "https://open.spotify.com/playlist/37i9dQZF1DWWp8EeOJJlpN",  # This Is Rachmaninoff
-    },
-    "chopin": {
-        "apple": "https://music.apple.com/ru/playlist/pl.a349afa03abe43d685571f632192b570",
-        "spotify": "https://open.spotify.com/playlist/37i9dQZF1DX41K7tDhtLsl",  # This Is Chopin
-    },
-    "vivaldi": {
-        "apple": "https://music.apple.com/ru/playlist/pl.fec7c813a8c249b88102e56db5a79f8c",
-        "spotify": "https://open.spotify.com/playlist/37i9dQZF1DWX1bKbL5bZ4n",  # This Is Vivaldi
-    },
-    "debussy": {
-        "apple": "https://music.apple.com/ru/playlist/pl.c2f7dce0a13548189e200a716af43c8f",
-        "spotify": "https://open.spotify.com/playlist/37i9dQZF1DWWVxqyN2fBzD",  # This Is Debussy
-    },
-    "ravel": {
-        "spotify": "https://open.spotify.com/playlist/37i9dQZF1DWVZkP3IZ6xHj",  # This Is Ravel
-    },
-    "shostakovich": {
-        "apple": "https://music.apple.com/ru/playlist/pl.f9a2b8d6f1b04178b5921bc98b7400e5",
-        "spotify": "https://open.spotify.com/playlist/37i9dQZF1DX9vk2dUsQnIQ",  # This Is Shostakovich
-    },
-    "stravinsky": {
-        "apple": "https://music.apple.com/ru/playlist/pl.bc8846a16fb84748993275a62126b303",
-        "spotify": "https://open.spotify.com/playlist/37i9dQZF1DWTbpTEaZ6bFc",  # This Is Stravinsky
-    },
-    "prokofiev": {
-        "apple": "https://music.apple.com/ru/playlist/pl.92593dee2b3f4295afce4ddf994d5cfc",
-        "spotify": "https://open.spotify.com/playlist/37i9dQZF1DWSwLt1UrcHfM",  # This Is Prokofiev
-    },
-    "handel": {
-        "apple": "https://music.apple.com/ru/playlist/pl.0d4fcc70129d4a14865ba65895213d9d",
-        "spotify": "https://open.spotify.com/playlist/37i9dQZF1DWXgrteGHYk8J",  # This Is Handel
-    },
-    "schubert": {
-        "apple": "https://music.apple.com/ru/playlist/pl.bcd558114bd748a7a5f0fa458560027f",
-        "spotify": "https://open.spotify.com/playlist/37i9dQZF1DXdG2HfMjlC1I",  # This Is Schubert
-    },
-    "schumann": {
-        "apple": "https://music.apple.com/ru/playlist/pl.e134abbf0621464daf57cf59c87632a1",
-        "spotify": "https://open.spotify.com/playlist/37i9dQZF1DWSMGFmnmZ7VZ",  # This Is Schumann
-    },
-    "brahms": {
-        "apple": "https://music.apple.com/ru/playlist/pl.163f926792274a63b69399db0f01841d",
-        "spotify": "https://open.spotify.com/playlist/37i9dQZF1DWZ5qKtLZkHpN",  # This Is Brahms
-    },
-    "mahler": {
-        "apple": "https://music.apple.com/ru/playlist/pl.afa1734df46f42709b6a6ed600b6223a",
-        "spotify": "https://open.spotify.com/playlist/37i9dQZF1DX9K2lHcl5wQ1",  # This Is Mahler
-    },
-    "wagner": {
-        "apple": "https://music.apple.com/ru/playlist/pl.41b8493720e34baeb23ce707b012ef2f",
-        "spotify": "https://open.spotify.com/playlist/37i9dQZF1DX1S8fQOKYf6v",  # This Is Wagner
-    },
-    "liszt": {
-        "apple": "https://music.apple.com/ru/playlist/pl.07a5c0ab0cb34abcb9973db03c7e8c6f",
-        "spotify": "https://open.spotify.com/playlist/37i9dQZF1DWVjRsUC2ng2V",  # This Is Liszt
-    },
-    "grieg": {
-        "apple": "https://music.apple.com/ru/playlist/pl.8750949e2a9548bf80f248b3dc47e255",
-        "spotify": "https://open.spotify.com/playlist/37i9dQZF1DWTNxUQZQ0z1T",  # This Is Grieg
-    },
-    "dvorak": {
-        "apple": "https://music.apple.com/ru/playlist/pl.9d28c83c6ecb48b68a135d1a3950b07b",
-        "spotify": "https://open.spotify.com/playlist/37i9dQZF1DWSk6qNta4vrg",  # This Is Dvořák
-    },
-    "mussorgsky": {
-        "spotify": "https://open.spotify.com/playlist/37i9dQZF1DWWFc9dtd9SoH",  # This Is Mussorgsky
-    },
-    "rimsky-korsakov": {
-        "spotify": "https://open.spotify.com/playlist/37i9dQZF1DX5gjAfk5uJhD",  # This Is Rimsky-Korsakov
-    },
-    "verdi": {
-        "apple": "https://music.apple.com/ru/playlist/pl.62dcc82ae6f5452e8f5afc5b1126b783",
-        "spotify": "https://open.spotify.com/playlist/37i9dQZF1DWWiE1lB1eWfI",  # This Is Verdi
-    },
-    "bizet": {
-        "spotify": "https://open.spotify.com/playlist/37i9dQZF1DX3X9Bk0mnpeK",  # This Is Bizet
-    },
-    "prokofiev": {
-        "apple": "https://music.apple.com/ru/playlist/pl.92593dee2b3f4295afce4ddf994d5cfc",
-        "spotify": "https://open.spotify.com/playlist/37i9dQZF1DWSwLt1UrcHfM",  # This Is Prokofiev
-    },
-    "satie": {
-        "spotify": "https://open.spotify.com/playlist/37i9dQZF1DX7WmwHbk60Lf",  # This Is Satie
-    },
-    "cage": {
-        "spotify": "https://open.spotify.com/playlist/37i9dQZF1DWT9gHMN0G23M",  # This Is Cage
-    },
-    "einaudi": {
-        "spotify": "https://open.spotify.com/playlist/37i9dQZF1DWWwTQHcQ7pPo",  # This Is Einaudi
-    },
-    "pärt": {
-        "spotify": "https://open.spotify.com/playlist/37i9dQZF1DWWWjP4Nefgnr",  # This Is Pärt
-    },
-    "cage": {
-        "spotify": "https://open.spotify.com/playlist/37i9dQZF1DWT9gHMN0G23M",  # This Is Cage
-    },
-}
-
 # ===================== ВСПОМОГАТЕЛЬНЫЕ ФУНКЦИИ =====================
 
 def normalize_text(text: str) -> str:
+    """Очищает текст от лишних символов и приводит к нижнему регистру"""
     text = re.sub(r'[^\w\s]', ' ', text)
     text = re.sub(r'\s+', ' ', text)
     return text.lower().strip()
 
 def find_composer_in_text(text: str) -> Tuple[Optional[str], Optional[Dict]]:
+    """Ищет композитора в тексте по базе данных"""
     normalized = normalize_text(text)
     words = normalized.split()
     
+    # Сначала проверяем точные совпадения (полные имена)
     for composer, data in COMPOSERS_DB.items():
         composer_lower = composer.lower()
         if composer_lower in normalized:
             return composer, data
+    
+    # Затем проверяем слова (для длинных фамилий)
+    for composer, data in COMPOSERS_DB.items():
+        composer_lower = composer.lower()
         if len(composer_lower) > 5:
             for part in composer_lower.split():
                 if len(part) > 3 and part in words:
                     return composer, data
+    
     return None, None
 
 def find_year_in_text(text: str) -> Optional[int]:
+    """Ищет четырехзначное число (год) в тексте"""
     pattern = r'\b(1[0-9]{3}|2[0-9]{3})\b'
     matches = re.findall(pattern, text)
     if matches:
@@ -439,130 +325,31 @@ def find_year_in_text(text: str) -> Optional[int]:
     return None
 
 def get_era_by_year(year: int) -> Optional[str]:
+    """Определяет эпоху по году"""
     for era_key, era_data in ERAS.items():
         if era_data["year_start"] <= year <= era_data["year_end"]:
             return era_key
     return None
 
-def get_composer_search_key(composer_key: str) -> str:
+def get_music_links(composer_name: str, search_query: str = None) -> Dict[str, str]:
     """
-    Возвращает ключ для поиска плейлиста в PLAYLISTS
+    Формирует ссылки для ПОИСКА в стриминговых сервисах.
+    Это самый надежный способ, так как не требует поддержания списка плейлистов.
     """
-    # Маппинг русских имен на английские ключи
-    mapping = {
-        "бах": "bach",
-        "бетховен": "beethoven",
-        "моцарт": "mozart",
-        "чайковский": "tchaikovsky",
-        "рахманинов": "rachmaninoff",
-        "rachmaninoff": "rachmaninoff",
-        "rachmaninov": "rachmaninoff",
-        "шопен": "chopin",
-        "chopin": "chopin",
-        "вивальди": "vivaldi",
-        "vivaldi": "vivaldi",
-        "дебюсси": "debussy",
-        "debussy": "debussy",
-        "равель": "ravel",
-        "ravel": "ravel",
-        "шостакович": "shostakovich",
-        "shostakovich": "shostakovich",
-        "стравинский": "stravinsky",
-        "stravinsky": "stravinsky",
-        "прокофьев": "prokofiev",
-        "prokofiev": "prokofiev",
-        "гендель": "handel",
-        "handel": "handel",
-        "händel": "handel",
-        "шуберт": "schubert",
-        "schubert": "schubert",
-        "шuman": "schumann",
-        "schumann": "schumann",
-        "брамс": "brahms",
-        "brahms": "brahms",
-        "малер": "mahler",
-        "mahler": "mahler",
-        "вагнер": "wagner",
-        "wagner": "wagner",
-        "лист": "liszt",
-        "liszt": "liszt",
-        "григ": "grieg",
-        "grieg": "grieg",
-        "дворжак": "dvorak",
-        "dvorak": "dvorak",
-        "муссоргский": "mussorgsky",
-        "mussorgsky": "mussorgsky",
-        "римский-корсаков": "rimsky-korsakov",
-        "rimsky-korsakov": "rimsky-korsakov",
-        "верди": "verdi",
-        "verdi": "verdi",
-        "бизе": "bizet",
-        "bizet": "bizet",
-        "сати": "satie",
-        "satie": "satie",
-        "кейдж": "cage",
-        "cage": "cage",
-        "эйнауди": "einaudi",
-        "einaudi": "einaudi",
-        "пярт": "pärt",
-        "pärt": "pärt",
-        "барток": "bartok",
-        "bartok": "bartok",
-        "копленд": "copland",
-        "copland": "copland",
-    }
-    
-    composer_lower = composer_key.lower()
-    if composer_lower in mapping:
-        return mapping[composer_lower]
-    
-    # Проверяем частичные совпадения
-    for key, value in mapping.items():
-        if key in composer_lower or composer_lower in key:
-            return value
-    
-    # Если не найдено, возвращаем английский вариант или оригинал
-    return composer_key.lower().replace(" ", "-")
-
-def get_playlist_links(composer_key: str) -> Dict[str, str]:
-    """
-    Возвращает ссылки на плейлисты для композитора.
-    Если плейлиста нет - возвращает ссылку на поиск.
-    """
-    search_key = get_composer_search_key(composer_key)
-    
-    # Базовый поисковый запрос
-    search_name = composer_key.title()
-    encoded_search = urllib.parse.quote(search_name)
-    
-    # Стандартные ссылки на поиск
-    default_links = {
-        "apple": f"https://music.apple.com/search?term={encoded_search}",
-        "yandex": f"https://music.yandex.ru/search?text={encoded_search}",
-        "spotify": f"https://open.spotify.com/search/{encoded_search}"
-    }
-    
-    # Ищем плейлист в справочнике
-    if search_key in PLAYLISTS:
-        playlist = PLAYLISTS[search_key]
-        # Заменяем только те ссылки, которые есть в справочнике
-        if "apple" in playlist:
-            default_links["apple"] = playlist["apple"]
-        if "spotify" in playlist:
-            default_links["spotify"] = playlist["spotify"]
-        if "yandex" in playlist:
-            default_links["yandex"] = playlist["yandex"]
-    
-    return default_links
-
-def get_search_links(query: str) -> Dict[str, str]:
-    """Возвращает ссылки на поиск по запросу"""
+    query = search_query or composer_name
     encoded_query = urllib.parse.quote(query)
-    return {
+    
+    links = {
+        # Для Apple Music используем стандартный поиск
         "apple": f"https://music.apple.com/search?term={encoded_query}",
+        
+        # Для Яндекс Музыки используем поиск. Это решит проблему с региональной недоступностью.
         "yandex": f"https://music.yandex.ru/search?text={encoded_query}",
+        
+        # Для Spotify используем поиск (без /tracks в конце)
         "spotify": f"https://open.spotify.com/search/{encoded_query}"
     }
+    return links
 
 # ===================== ОСНОВНЫЕ ФУНКЦИИ =====================
 
@@ -572,8 +359,8 @@ def format_response(composer_key: str, era_key: str, composer_data: Dict = None,
     if not era_data:
         return "⚠️ Не удалось определить эпоху. Пожалуйста, уточните данные.", {}
     
-    # Получаем ссылки на плейлисты или поиск
-    links = get_playlist_links(composer_key)
+    # Получаем ссылки на поиск
+    links = get_music_links(composer_key, composer_key)
     
     years_life = ""
     if composer_data:
@@ -586,34 +373,13 @@ def format_response(composer_key: str, era_key: str, composer_data: Dict = None,
             else:
                 years_life += "–н.в."
     
-    # Определяем, есть ли плейлисты
-    has_playlist = False
-    playlist_names = []
-    
-    if links["apple"] and "playlist" in links["apple"]:
-        has_playlist = True
-        playlist_names.append("Apple Music")
-    if links["spotify"] and "playlist" in links["spotify"]:
-        has_playlist = True
-        playlist_names.append("Spotify")
-    if links["yandex"] and "playlist" in links["yandex"]:
-        has_playlist = True
-        playlist_names.append("Яндекс Музыка")
-    
-    # Формируем сообщение
-    playlist_text = ""
-    if has_playlist:
-        playlist_text = f"🎵 <b>Плейлист «{composer_key.title()}»</b> в {'/'.join(playlist_names)}"
-    else:
-        playlist_text = "🔍 <b>Поиск по имени композитора</b>"
-    
     message = f"""<b>{era_data['emoji']} Эпоха:</b> {era_data['name']}
 <b>📅 Период:</b> {era_data['year_start']}–{era_data['year_end']}
 
 <b>🎵 Композитор:</b> {composer_key.title()}
 {f'<b>📅 Годы жизни:</b> {years_life}' if years_life else ''}
 
-{playlist_text}
+<b>🔍 Поиск по имени композитора</b>
 
 Выберите музыкальный сервис:"""
     
@@ -626,7 +392,7 @@ def format_unknown_response(text: str) -> Tuple[str, Dict[str, str]]:
         era_key = get_era_by_year(year)
         if era_key:
             era_data = ERAS[era_key]
-            links = get_search_links(text[:50])
+            links = get_music_links(text[:50], text[:50])
             
             message = f"""🔍 <b>Композитор не найден</b>, но я определил эпоху по году {year}:
 
@@ -638,7 +404,7 @@ def format_unknown_response(text: str) -> Tuple[str, Dict[str, str]]:
 Выберите музыкальный сервис:"""
             return message, links
     
-    links = get_search_links(text[:50])
+    links = get_music_links(text[:50], text[:50])
     
     message = f"""⚠️ <b>Не удалось определить эпоху</b>
 
@@ -663,7 +429,7 @@ async def start(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     welcome_text = f"""👋 <b>Привет, {user.first_name}!</b>
 
 Я — <b>ClassicalEraBot</b> 🎼
-Я помогаю распределять классическую музыку по историческим эпохам и даю ссылки на плейлисты в Apple Music, Яндекс Музыке и Spotify.
+Я помогаю распределять классическую музыку по историческим эпохам и даю ссылки на поиск в Apple Music, Яндекс Музыке и Spotify.
 
 <b>Как я работаю:</b>
 1️⃣ Отправь мне название произведения или имя композитора
@@ -671,14 +437,14 @@ async def start(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
 3️⃣ Определю эпоху и покажу ссылки
 
 <b>Что я умею:</b>
-• 🎵 Показываю официальные плейлисты (если есть)
-• 🔍 Или ссылки на поиск по имени композитора
+• 🎵 Определяю эпоху по композитору
+• 🔍 Даю ссылки на поиск в 3-х сервисах
 
 <b>Примеры запросов:</b>
-• <i>«Бах»</i> → покажет плейлист This Is Bach
-• <i>«Рахманинов»</i> → покажет плейлист This Is Rachmaninoff
-• <i>«Моцарт Реквием»</i> → найдёт Моцарта
-• <i>«Чайковский Лебединое озеро»</i> → найдёт Чайковского
+• <i>«Бах»</i> → Барокко + ссылки на поиск
+• <i>«Рахманинов»</i> → Романтизм + ссылки на поиск
+• <i>«Моцарт Реквием»</i> → Классицизм + ссылки на поиск
+• <i>«Чайковский Лебединое озеро»</i> → Романтизм + ссылки на поиск
 
 Используй команду /help для подробной информации."""
     
@@ -698,9 +464,10 @@ async def help_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> No
 
 <b>Примеры:</b>
 • <i>«Моцарт Реквием»</i> → Классицизм
-• <i>«Бах»</i> → Барокко (плейлист This Is Bach)
+• <i>«Бах»</i> → Барокко
 • <i>«Дебюсси Лунный свет»</i> → Модерн
-• <i>«Рахманинов»</i> → Романтизм (плейлист This Is Rachmaninoff)
+• <i>«Рахманинов»</i> → Романтизм
+• <i>«Шостакович Симфония №7 1941»</i> → Модерн (по году)
 
 <b>Команды:</b>
 /start - Приветствие
@@ -723,8 +490,6 @@ async def eras_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> No
 async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     user_text = update.message.text
     logger.info(f"Получено сообщение: {user_text}")
-    
-    context.user_data['last_query'] = user_text
     
     composer_key, composer_data = find_composer_in_text(user_text)
     
@@ -797,9 +562,9 @@ async def button_callback(update: Update, context: ContextTypes.DEFAULT_TYPE) ->
 
 <b>Примеры:</b>
 • Моцарт Реквием → Классицизм
-• Бах → Барокко (плейлист This Is Bach)
+• Бах → Барокко
 • Дебюсси → Модерн
-• Рахманинов → Романтизм (плейлист This Is Rachmaninoff)
+• Рахманинов → Романтизм
 
 <b>Если я не узнал композитора:</b>
 Укажи год создания (например, 1824)""",
