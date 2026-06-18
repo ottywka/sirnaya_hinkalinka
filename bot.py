@@ -1,11 +1,12 @@
 """
 TELEGRAM-БОТ ДЛЯ РАСПРЕДЕЛЕНИЯ КЛАССИЧЕСКОЙ МУЗЫКИ ПО ЭПОХАМ
-Версия: Bothost (с поддержкой переменных окружения)
+Версия: Bothost (с расширенной базой композиторов)
 """
 
 import os
 import re
 import logging
+import urllib.parse
 from datetime import datetime
 from typing import Dict, Optional, Tuple
 
@@ -13,17 +14,14 @@ from telegram import Update, InlineKeyboardButton, InlineKeyboardMarkup
 from telegram.ext import Application, CommandHandler, MessageHandler, filters, ContextTypes, CallbackQueryHandler
 
 # ===================== НАСТРОЙКИ =====================
-# Читаем токен из переменной окружения BOT_TOKEN
 BOT_TOKEN = os.environ.get("BOT_TOKEN")
 
-# Проверяем, что токен не пустой
 if not BOT_TOKEN:
     raise ValueError(
         "❌ Токен не найден! Установите переменную окружения BOT_TOKEN\n"
         "В панели Bothost добавьте переменную окружения BOT_TOKEN с вашим токеном от @BotFather"
     )
 
-# Настройка логирования
 logging.basicConfig(
     format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',
     level=logging.INFO
@@ -39,7 +37,8 @@ ERAS = {
         "year_start": 0,
         "year_end": 1599,
         "emoji": "🏛️",
-        "playlist_link": "https://music.apple.com/search?term=medieval%20renaissance%20classical"
+        "playlist_apple": "https://music.apple.com/search?term=medieval%20renaissance%20classical",
+        "playlist_yandex": "https://music.yandex.ru/search?text=medieval%20renaissance%20classical"
     },
     "baroque": {
         "name": "Барокко (Baroque)",
@@ -47,7 +46,8 @@ ERAS = {
         "year_start": 1600,
         "year_end": 1749,
         "emoji": "👑",
-        "playlist_link": "https://music.apple.com/sg/playlist/bach-and-the-baroque/pl.d7a320e862fe4017a6ba8d2c6937f04c"
+        "playlist_apple": "https://music.apple.com/sg/playlist/bach-and-the-baroque/pl.d7a320e862fe4017a6ba8d2c6937f04c",
+        "playlist_yandex": "https://music.yandex.ru/users/music-blog/playlists/1010"
     },
     "classical": {
         "name": "Классицизм (Classical)",
@@ -55,7 +55,8 @@ ERAS = {
         "year_start": 1750,
         "year_end": 1819,
         "emoji": "🏛️",
-        "playlist_link": "https://music.apple.com/sg/playlist/mozart-and-more/pl.fe324bdb6f104480bae2021c10bbcf77"
+        "playlist_apple": "https://music.apple.com/sg/playlist/mozart-and-more/pl.fe324bdb6f104480bae2021c10bbcf77",
+        "playlist_yandex": "https://music.yandex.ru/users/music-blog/playlists/1009"
     },
     "romantic": {
         "name": "Романтизм (Romantic)",
@@ -63,7 +64,8 @@ ERAS = {
         "year_start": 1820,
         "year_end": 1899,
         "emoji": "🌹",
-        "playlist_link": "https://music.apple.com/search?term=romantic%20classical%20playlist"
+        "playlist_apple": "https://music.apple.com/search?term=romantic%20classical%20playlist",
+        "playlist_yandex": "https://music.yandex.ru/users/music-blog/playlists/1011"
     },
     "modern": {
         "name": "Импрессионизм / Модерн (Modern)",
@@ -71,7 +73,8 @@ ERAS = {
         "year_start": 1900,
         "year_end": 1949,
         "emoji": "🎨",
-        "playlist_link": "https://music.apple.com/search?term=modern%20classical%20impressionist"
+        "playlist_apple": "https://music.apple.com/search?term=modern%20classical%20impressionist",
+        "playlist_yandex": "https://music.yandex.ru/users/music-blog/playlists/1012"
     },
     "contemporary": {
         "name": "Современная академическая (Contemporary)",
@@ -79,87 +82,314 @@ ERAS = {
         "year_start": 1950,
         "year_end": datetime.now().year,
         "emoji": "🔮",
-        "playlist_link": "https://music.apple.com/search?term=contemporary%20classical%20minimalist"
+        "playlist_apple": "https://music.apple.com/search?term=contemporary%20classical%20minimalist",
+        "playlist_yandex": "https://music.yandex.ru/users/music-blog/playlists/1013"
     }
 }
 
+# ===================== РАСШИРЕННАЯ БАЗА КОМПОЗИТОРОВ =====================
+
 COMPOSERS_DB = {
+    # ===== РАННЯЯ МУЗЫКА (Medieval / Renaissance) =====
+    # Средневековье
     "машо": {"era": "medieval", "birth": 1300, "death": 1377},
     "ландини": {"era": "medieval", "birth": 1325, "death": 1397},
     "данстейбл": {"era": "medieval", "birth": 1390, "death": 1453},
     "таллис": {"era": "medieval", "birth": 1505, "death": 1585},
+    "томас таллис": {"era": "medieval", "birth": 1505, "death": 1585},
+    "палестрина": {"era": "medieval", "birth": 1525, "death": 1594},
+    "джованни да палестрина": {"era": "medieval", "birth": 1525, "death": 1594},
+    "виктория": {"era": "medieval", "birth": 1548, "death": 1611},
+    "т. л. де виктория": {"era": "medieval", "birth": 1548, "death": 1611},
+    "берд": {"era": "medieval", "birth": 1543, "death": 1623},
+    "уильям берд": {"era": "medieval", "birth": 1543, "death": 1623},
+    
+    # ===== БАРОККО (Baroque) =====
+    # Итальянское барокко
     "монтеверди": {"era": "baroque", "birth": 1567, "death": 1643},
+    "клаудио монтеверди": {"era": "baroque", "birth": 1567, "death": 1643},
+    "кариссими": {"era": "baroque", "birth": 1605, "death": 1674},
+    "джакомо кариссими": {"era": "baroque", "birth": 1605, "death": 1674},
+    "фрескобальди": {"era": "baroque", "birth": 1583, "death": 1643},
+    "джироламо фрескобальди": {"era": "baroque", "birth": 1583, "death": 1643},
+    "корелли": {"era": "baroque", "birth": 1653, "death": 1713},
+    "арканджело корелли": {"era": "baroque", "birth": 1653, "death": 1713},
+    "вивальди": {"era": "baroque", "birth": 1678, "death": 1741},
+    "антонио вивальди": {"era": "baroque", "birth": 1678, "death": 1741},
+    "скарлатти": {"era": "baroque", "birth": 1685, "death": 1757},
+    "доменико скарлатти": {"era": "baroque", "birth": 1685, "death": 1757},
+    "алессандро скарлатти": {"era": "baroque", "birth": 1660, "death": 1725},
+    "альбинони": {"era": "baroque", "birth": 1671, "death": 1751},
+    "томазо альбинони": {"era": "baroque", "birth": 1671, "death": 1751},
+    "локателли": {"era": "baroque", "birth": 1695, "death": 1764},
+    "пьетро локателли": {"era": "baroque", "birth": 1695, "death": 1764},
+    "джеминиани": {"era": "baroque", "birth": 1687, "death": 1762},
+    "франческо джеминиани": {"era": "baroque", "birth": 1687, "death": 1762},
+    "тартини": {"era": "baroque", "birth": 1692, "death": 1770},
+    "джузеппе тартини": {"era": "baroque", "birth": 1692, "death": 1770},
+    
+    # Немецкое барокко
+    "бах": {"era": "baroque", "birth": 1685, "death": 1750},
+    "иоганн себастьян бах": {"era": "baroque", "birth": 1685, "death": 1750},
+    "j.s. bach": {"era": "baroque", "birth": 1685, "death": 1750},
+    "гендель": {"era": "baroque", "birth": 1685, "death": 1759},
+    "георг фридрих гендель": {"era": "baroque", "birth": 1685, "death": 1759},
+    "händel": {"era": "baroque", "birth": 1685, "death": 1759},
+    "телеман": {"era": "baroque", "birth": 1681, "death": 1767},
+    "георг филипп телеман": {"era": "baroque", "birth": 1681, "death": 1767},
+    "пахельбель": {"era": "baroque", "birth": 1653, "death": 1706},
+    "иоганн пахельбель": {"era": "baroque", "birth": 1653, "death": 1706},
+    "букстехуде": {"era": "baroque", "birth": 1637, "death": 1707},
+    "дитрих букстехуде": {"era": "baroque", "birth": 1637, "death": 1707},
+    "фробергер": {"era": "baroque", "birth": 1616, "death": 1667},
+    "иоганн якоб фробергер": {"era": "baroque", "birth": 1616, "death": 1667},
+    "шайдт": {"era": "baroque", "birth": 1587, "death": 1654},
+    "самуэль шайдт": {"era": "baroque", "birth": 1587, "death": 1654},
+    
+    # Французское барокко
+    "люлли": {"era": "baroque", "birth": 1632, "death": 1687},
+    "жан-батист люлли": {"era": "baroque", "birth": 1632, "death": 1687},
+    "куперен": {"era": "baroque", "birth": 1668, "death": 1733},
+    "франсуа куперен": {"era": "baroque", "birth": 1668, "death": 1733},
+    "рамо": {"era": "baroque", "birth": 1683, "death": 1764},
+    "жан-филипп рамо": {"era": "baroque", "birth": 1683, "death": 1764},
+    "шампоньер": {"era": "baroque", "birth": 1602, "death": 1672},
+    "жак шампоньер": {"era": "baroque", "birth": 1602, "death": 1672},
+    
+    # Английское барокко
     "пёрселл": {"era": "baroque", "birth": 1659, "death": 1695},
     "перселл": {"era": "baroque", "birth": 1659, "death": 1695},
-    "вивальди": {"era": "baroque", "birth": 1678, "death": 1741},
-    "бах": {"era": "baroque", "birth": 1685, "death": 1750},
-    "гендель": {"era": "baroque", "birth": 1685, "death": 1759},
-    "händel": {"era": "baroque", "birth": 1685, "death": 1759},
-    "скарлатти": {"era": "baroque", "birth": 1685, "death": 1757},
-    "рамо": {"era": "baroque", "birth": 1683, "death": 1764},
+    "генри пёрселл": {"era": "baroque", "birth": 1659, "death": 1695},
+    
+    # Русское барокко
+    "бортнянский": {"era": "baroque", "birth": 1751, "death": 1825},
+    "дмитрий бортнянский": {"era": "baroque", "birth": 1751, "death": 1825},
+    "березовский": {"era": "baroque", "birth": 1745, "death": 1777},
+    "максим березовский": {"era": "baroque", "birth": 1745, "death": 1777},
+    
+    # ===== КЛАССИЦИЗМ (Classical) =====
     "глюк": {"era": "classical", "birth": 1714, "death": 1787},
+    "кристоф глюк": {"era": "classical", "birth": 1714, "death": 1787},
     "гайдн": {"era": "classical", "birth": 1732, "death": 1809},
+    "йозеф гайдн": {"era": "classical", "birth": 1732, "death": 1809},
     "haydn": {"era": "classical", "birth": 1732, "death": 1809},
     "моцарт": {"era": "classical", "birth": 1756, "death": 1791},
+    "вольфганг амадей моцарт": {"era": "classical", "birth": 1756, "death": 1791},
     "mozart": {"era": "classical", "birth": 1756, "death": 1791},
     "бетховен": {"era": "classical", "birth": 1770, "death": 1827},
+    "людвиг ван бетховен": {"era": "classical", "birth": 1770, "death": 1827},
     "beethoven": {"era": "classical", "birth": 1770, "death": 1827},
     "сальери": {"era": "classical", "birth": 1750, "death": 1825},
+    "антонио сальери": {"era": "classical", "birth": 1750, "death": 1825},
     "к.ф.э. бах": {"era": "classical", "birth": 1714, "death": 1788},
     "c.p.e. bach": {"era": "classical", "birth": 1714, "death": 1788},
+    "иоганн христиан бах": {"era": "classical", "birth": 1735, "death": 1782},
+    "j.c. bach": {"era": "classical", "birth": 1735, "death": 1782},
+    "боккерини": {"era": "classical", "birth": 1743, "death": 1805},
+    "луиджи боккерини": {"era": "classical", "birth": 1743, "death": 1805},
+    "клементи": {"era": "classical", "birth": 1752, "death": 1832},
+    "муцио клементи": {"era": "classical", "birth": 1752, "death": 1832},
+    
+    # ===== РОМАНТИЗМ (Romantic) =====
     "шуберт": {"era": "romantic", "birth": 1797, "death": 1828},
+    "франц шуберт": {"era": "romantic", "birth": 1797, "death": 1828},
     "schubert": {"era": "romantic", "birth": 1797, "death": 1828},
+    
+    "вебер": {"era": "romantic", "birth": 1786, "death": 1826},
+    "карл мария фон вебер": {"era": "romantic", "birth": 1786, "death": 1826},
+    
+    "мендельсон": {"era": "romantic", "birth": 1809, "death": 1847},
+    "феликс мендельсон": {"era": "romantic", "birth": 1809, "death": 1847},
+    "mendelssohn": {"era": "romantic", "birth": 1809, "death": 1847},
+    
     "шопен": {"era": "romantic", "birth": 1810, "death": 1849},
+    "фредерик шопен": {"era": "romantic", "birth": 1810, "death": 1849},
     "chopin": {"era": "romantic", "birth": 1810, "death": 1849},
-    "лист": {"era": "romantic", "birth": 1811, "death": 1886},
-    "liszt": {"era": "romantic", "birth": 1811, "death": 1886},
-    "вагнер": {"era": "romantic", "birth": 1813, "death": 1883},
-    "wagner": {"era": "romantic", "birth": 1813, "death": 1883},
-    "верди": {"era": "romantic", "birth": 1813, "death": 1901},
-    "verdi": {"era": "romantic", "birth": 1813, "death": 1901},
-    "брамс": {"era": "romantic", "birth": 1833, "death": 1897},
-    "brahms": {"era": "romantic", "birth": 1833, "death": 1897},
-    "чайковский": {"era": "romantic", "birth": 1840, "death": 1893},
-    "tchaikovsky": {"era": "romantic", "birth": 1840, "death": 1893},
-    "дворжак": {"era": "romantic", "birth": 1841, "death": 1904},
-    "dvorak": {"era": "romantic", "birth": 1841, "death": 1904},
-    "григ": {"era": "romantic", "birth": 1843, "death": 1907},
-    "grieg": {"era": "romantic", "birth": 1843, "death": 1907},
-    "малер": {"era": "romantic", "birth": 1860, "death": 1911},
-    "mahler": {"era": "romantic", "birth": 1860, "death": 1911},
+    
+    "шuman": {"era": "romantic", "birth": 1810, "death": 1856},
+    "шyман": {"era": "romantic", "birth": 1810, "death": 1856},
+    "роберт шуман": {"era": "romantic", "birth": 1810, "death": 1856},
     "schumann": {"era": "romantic", "birth": 1810, "death": 1856},
+    
+    "лист": {"era": "romantic", "birth": 1811, "death": 1886},
+    "ференц лист": {"era": "romantic", "birth": 1811, "death": 1886},
+    "liszt": {"era": "romantic", "birth": 1811, "death": 1886},
+    
+    "вагнер": {"era": "romantic", "birth": 1813, "death": 1883},
+    "рихард вагнер": {"era": "romantic", "birth": 1813, "death": 1883},
+    "wagner": {"era": "romantic", "birth": 1813, "death": 1883},
+    
+    "верди": {"era": "romantic", "birth": 1813, "death": 1901},
+    "джузеппе верди": {"era": "romantic", "birth": 1813, "death": 1901},
+    "verdi": {"era": "romantic", "birth": 1813, "death": 1901},
+    
+    "берлиоз": {"era": "romantic", "birth": 1803, "death": 1869},
+    "гектор берлиоз": {"era": "romantic", "birth": 1803, "death": 1869},
+    
+    "брамс": {"era": "romantic", "birth": 1833, "death": 1897},
+    "иоганнес брамс": {"era": "romantic", "birth": 1833, "death": 1897},
+    "brahms": {"era": "romantic", "birth": 1833, "death": 1897},
+    
+    "бизе": {"era": "romantic", "birth": 1838, "death": 1875},
+    "жорж бизе": {"era": "romantic", "birth": 1838, "death": 1875},
+    
+    "муссоргский": {"era": "romantic", "birth": 1839, "death": 1881},
+    "модест муссоргский": {"era": "romantic", "birth": 1839, "death": 1881},
+    "mussorgsky": {"era": "romantic", "birth": 1839, "death": 1881},
+    
+    "чайковский": {"era": "romantic", "birth": 1840, "death": 1893},
+    "пётр ильич чайковский": {"era": "romantic", "birth": 1840, "death": 1893},
+    "tchaikovsky": {"era": "romantic", "birth": 1840, "death": 1893},
+    "tschai": {"era": "romantic", "birth": 1840, "death": 1893},
+    
+    "дворжак": {"era": "romantic", "birth": 1841, "death": 1904},
+    "антонин дворжак": {"era": "romantic", "birth": 1841, "death": 1904},
+    "dvorak": {"era": "romantic", "birth": 1841, "death": 1904},
+    
+    "григ": {"era": "romantic", "birth": 1843, "death": 1907},
+    "эдвард григ": {"era": "romantic", "birth": 1843, "death": 1907},
+    "grieg": {"era": "romantic", "birth": 1843, "death": 1907},
+    
+    "римский-корсаков": {"era": "romantic", "birth": 1844, "death": 1908},
+    "николай римский-корсаков": {"era": "romantic", "birth": 1844, "death": 1908},
+    "rimsky-korsakov": {"era": "romantic", "birth": 1844, "death": 1908},
+    
+    "бородин": {"era": "romantic", "birth": 1833, "death": 1887},
+    "александр бородин": {"era": "romantic", "birth": 1833, "death": 1887},
+    
+    "куперен": {"era": "romantic", "birth": 1835, "death": 1921},
+    
+    "малер": {"era": "romantic", "birth": 1860, "death": 1911},
+    "густав малер": {"era": "romantic", "birth": 1860, "death": 1911},
+    "mahler": {"era": "romantic", "birth": 1860, "death": 1911},
+    
+    "штраус": {"era": "romantic", "birth": 1864, "death": 1949},
+    "рихард штраус": {"era": "romantic", "birth": 1864, "death": 1949},
+    "richard strauss": {"era": "romantic", "birth": 1864, "death": 1949},
+    
+    "рахманинов": {"era": "romantic", "birth": 1873, "death": 1943},
+    "сергей рахманинов": {"era": "romantic", "birth": 1873, "death": 1943},
+    "rachmaninoff": {"era": "romantic", "birth": 1873, "death": 1943},
+    "rachmaninov": {"era": "romantic", "birth": 1873, "death": 1943},
+    
+    # ===== МОДЕРН (Modern) =====
     "дебюсси": {"era": "modern", "birth": 1862, "death": 1918},
+    "клод дебюсси": {"era": "modern", "birth": 1862, "death": 1918},
     "debussy": {"era": "modern", "birth": 1862, "death": 1918},
-    "равель": {"era": "modern", "birth": 1875, "death": 1937},
-    "ravel": {"era": "modern", "birth": 1875, "death": 1937},
+    
     "сати": {"era": "modern", "birth": 1866, "death": 1925},
+    "эрик сати": {"era": "modern", "birth": 1866, "death": 1925},
     "satie": {"era": "modern", "birth": 1866, "death": 1925},
-    "стравинский": {"era": "modern", "birth": 1882, "death": 1971},
-    "stravinsky": {"era": "modern", "birth": 1882, "death": 1971},
+    
+    "равель": {"era": "modern", "birth": 1875, "death": 1937},
+    "морис равель": {"era": "modern", "birth": 1875, "death": 1937},
+    "ravel": {"era": "modern", "birth": 1875, "death": 1937},
+    
+    "фаля": {"era": "modern", "birth": 1876, "death": 1946},
+    "мануэль де фаля": {"era": "modern", "birth": 1876, "death": 1946},
+    
+    "респиги": {"era": "modern", "birth": 1879, "death": 1936},
+    "отторино респиги": {"era": "modern", "birth": 1879, "death": 1936},
+    
     "барток": {"era": "modern", "birth": 1881, "death": 1945},
+    "бела барток": {"era": "modern", "birth": 1881, "death": 1945},
     "bartok": {"era": "modern", "birth": 1881, "death": 1945},
+    
+    "стравинский": {"era": "modern", "birth": 1882, "death": 1971},
+    "игорь стравинский": {"era": "modern", "birth": 1882, "death": 1971},
+    "stravinsky": {"era": "modern", "birth": 1882, "death": 1971},
+    
     "прокофьев": {"era": "modern", "birth": 1891, "death": 1953},
+    "сергей прокофьев": {"era": "modern", "birth": 1891, "death": 1953},
     "prokofiev": {"era": "modern", "birth": 1891, "death": 1953},
-    "шостакович": {"era": "modern", "birth": 1906, "death": 1975},
-    "shostakovich": {"era": "modern", "birth": 1906, "death": 1975},
+    
     "копленд": {"era": "modern", "birth": 1900, "death": 1990},
+    "аарон копленд": {"era": "modern", "birth": 1900, "death": 1990},
     "copland": {"era": "modern", "birth": 1900, "death": 1990},
+    
+    "веберн": {"era": "modern", "birth": 1883, "death": 1945},
+    "антон веберн": {"era": "modern", "birth": 1883, "death": 1945},
+    
+    "берг": {"era": "modern", "birth": 1885, "death": 1935},
+    "альбан берг": {"era": "modern", "birth": 1885, "death": 1935},
+    
+    "онигер": {"era": "modern", "birth": 1892, "death": 1955},
+    "артюр онигер": {"era": "modern", "birth": 1892, "death": 1955},
+    
+    "мийо": {"era": "modern", "birth": 1892, "death": 1974},
+    "дариус мийо": {"era": "modern", "birth": 1892, "death": 1974},
+    
+    "гайду": {"era": "modern", "birth": 1892, "death": 1965},
+    
+    "прокофьев": {"era": "modern", "birth": 1891, "death": 1953},
+    
+    "глиэр": {"era": "modern", "birth": 1875, "death": 1956},
+    "рейнгольд глиэр": {"era": "modern", "birth": 1875, "death": 1956},
+    
+    "миасковский": {"era": "modern", "birth": 1881, "death": 1950},
+    "николай миасковский": {"era": "modern", "birth": 1881, "death": 1950},
+    
+    "хачатурян": {"era": "modern", "birth": 1903, "death": 1978},
+    "арам хачатурян": {"era": "modern", "birth": 1903, "death": 1978},
+    "khachaturian": {"era": "modern", "birth": 1903, "death": 1978},
+    
+    "кабалевский": {"era": "modern", "birth": 1904, "death": 1987},
+    "дмитрий кабалевский": {"era": "modern", "birth": 1904, "death": 1987},
+    
+    "шостакович": {"era": "modern", "birth": 1906, "death": 1975},
+    "дмитрий шостакович": {"era": "modern", "birth": 1906, "death": 1975},
+    "shostakovich": {"era": "modern", "birth": 1906, "death": 1975},
+    
+    "бриттен": {"era": "modern", "birth": 1913, "death": 1976},
+    "бенджамин бриттен": {"era": "modern", "birth": 1913, "death": 1976},
+    
+    # ===== СОВРЕМЕННАЯ (Contemporary) =====
     "мессиан": {"era": "contemporary", "birth": 1908, "death": 1992},
+    "оливье мессиан": {"era": "contemporary", "birth": 1908, "death": 1992},
     "messiaen": {"era": "contemporary", "birth": 1908, "death": 1992},
-    "булез": {"era": "contemporary", "birth": 1925, "death": 2016},
-    "boulez": {"era": "contemporary", "birth": 1925, "death": 2016},
+    
     "кейдж": {"era": "contemporary", "birth": 1912, "death": 1992},
+    "джон кейдж": {"era": "contemporary", "birth": 1912, "death": 1992},
     "cage": {"era": "contemporary", "birth": 1912, "death": 1992},
+    
+    "булез": {"era": "contemporary", "birth": 1925, "death": 2016},
+    "пьер булез": {"era": "contemporary", "birth": 1925, "death": 2016},
+    "boulez": {"era": "contemporary", "birth": 1925, "death": 2016},
+    
     "штокхаузен": {"era": "contemporary", "birth": 1928, "death": 2007},
+    "карлхайнц штокхаузен": {"era": "contemporary", "birth": 1928, "death": 2007},
     "stockhausen": {"era": "contemporary", "birth": 1928, "death": 2007},
+    
     "шнитке": {"era": "contemporary", "birth": 1934, "death": 1998},
+    "альфред шнитке": {"era": "contemporary", "birth": 1934, "death": 1998},
     "schnittke": {"era": "contemporary", "birth": 1934, "death": 1998},
+    
     "пярт": {"era": "contemporary", "birth": 1935, "death": None},
+    "арво пярт": {"era": "contemporary", "birth": 1935, "death": None},
     "pärt": {"era": "contemporary", "birth": 1935, "death": None},
+    
+    "горецкий": {"era": "contemporary", "birth": 1933, "death": 2010},
+    "генрик горецкий": {"era": "contemporary", "birth": 1933, "death": 2010},
+    
+    "лигети": {"era": "contemporary", "birth": 1923, "death": 2006},
+    "дьёрдь лигети": {"era": "contemporary", "birth": 1923, "death": 2006},
+    
+    "бере": {"era": "contemporary", "birth": 1925, "death": 2016},
+    "лючано берио": {"era": "contemporary", "birth": 1925, "death": 2003},
+    
     "салонен": {"era": "contemporary", "birth": 1958, "death": None},
+    "эса-пекка салонен": {"era": "contemporary", "birth": 1958, "death": None},
     "salonen": {"era": "contemporary", "birth": 1958, "death": None},
+    
     "эйнауди": {"era": "contemporary", "birth": 1955, "death": None},
+    "людовико эйнауди": {"era": "contemporary", "birth": 1955, "death": None},
     "einaudi": {"era": "contemporary", "birth": 1955, "death": None},
+    
+    "рихтер": {"era": "contemporary", "birth": 1969, "death": None},
+    "макс рихтер": {"era": "contemporary", "birth": 1969, "death": None},
+    
+    "йоханнссон": {"era": "contemporary", "birth": 1969, "death": None},
+    "йоуханн йоуханнссон": {"era": "contemporary", "birth": 1969, "death": 2018},
 }
 
 # ===================== ВСПОМОГАТЕЛЬНЫЕ ФУНКЦИИ =====================
@@ -173,14 +403,20 @@ def find_composer_in_text(text: str) -> Tuple[Optional[str], Optional[Dict]]:
     normalized = normalize_text(text)
     words = normalized.split()
     
+    # Сначала проверяем точные совпадения (полные имена)
     for composer, data in COMPOSERS_DB.items():
         composer_lower = composer.lower()
         if composer_lower in normalized:
             return composer, data
+    
+    # Затем проверяем слова (для длинных фамилий)
+    for composer, data in COMPOSERS_DB.items():
+        composer_lower = composer.lower()
         if len(composer_lower) > 5:
             for part in composer_lower.split():
                 if len(part) > 3 and part in words:
                     return composer, data
+    
     return None, None
 
 def find_year_in_text(text: str) -> Optional[int]:
@@ -196,10 +432,32 @@ def get_era_by_year(year: int) -> Optional[str]:
             return era_key
     return None
 
-def format_response(composer_name: str, era_key: str, composer_data: Dict = None) -> str:
+def get_search_urls(era_key: str, composer_name: str = None, user_text: str = None) -> Tuple[str, str]:
     era_data = ERAS.get(era_key)
     if not era_data:
-        return "⚠️ Не удалось определить эпоху. Пожалуйста, уточните данные."
+        return "#", "#"
+    
+    apple_url = era_data.get("playlist_apple", "#")
+    yandex_url = era_data.get("playlist_yandex", "#")
+    
+    # Если нет готового плейлиста, формируем поисковый запрос
+    if yandex_url == "#" or "search" in yandex_url:
+        if composer_name:
+            query = composer_name
+        elif user_text:
+            query = user_text[:50]
+        else:
+            query = era_data["name_en"]
+        
+        encoded_query = urllib.parse.quote(query)
+        yandex_url = f"https://music.yandex.ru/search?text={encoded_query}"
+    
+    return apple_url, yandex_url
+
+def format_response(composer_name: str, era_key: str, composer_data: Dict = None, user_text: str = None) -> Tuple[str, str, str]:
+    era_data = ERAS.get(era_key)
+    if not era_data:
+        return "⚠️ Не удалось определить эпоху. Пожалуйста, уточните данные.", "", ""
     
     years_life = ""
     if composer_data:
@@ -212,6 +470,8 @@ def format_response(composer_name: str, era_key: str, composer_data: Dict = None
             else:
                 years_life += "–н.в."
     
+    apple_url, yandex_url = get_search_urls(era_key, composer_name, user_text)
+    
     message = f"""<b>{era_data['emoji']} Эпоха:</b> {era_data['name']}
 <b>📅 Период:</b> {era_data['year_start']}–{era_data['year_end']}
 
@@ -220,25 +480,33 @@ def format_response(composer_name: str, era_key: str, composer_data: Dict = None
 
 ✅ <b>Трек добавлен в плейлист «{era_data['name_en']}»</b>
 
-🎵 <a href="{era_data['playlist_link']}">Слушать в Apple Music</a>"""
-    return message
+Выберите музыкальный сервис:"""
+    
+    return message, apple_url, yandex_url
 
-def format_unknown_response(text: str) -> str:
+def format_unknown_response(text: str) -> Tuple[str, str, str]:
     year = find_year_in_text(text)
     if year:
         era_key = get_era_by_year(year)
         if era_key:
             era_data = ERAS[era_key]
-            return f"""🔍 <b>Композитор не найден</b>, но я определил эпоху по году {year}:
+            apple_url, yandex_url = get_search_urls(era_key, None, text)
+            
+            message = f"""🔍 <b>Композитор не найден</b>, но я определил эпоху по году {year}:
 
 <b>{era_data['emoji']} Эпоха:</b> {era_data['name']}
 <b>📅 Период:</b> {era_data['year_start']}–{era_data['year_end']}
 
 ✅ <b>Трек добавлен в плейлист «{era_data['name_en']}»</b>
 
-🎵 <a href="{era_data['playlist_link']}">Слушать в Apple Music</a>"""
+Выберите музыкальный сервис:"""
+            return message, apple_url, yandex_url
     
-    return f"""⚠️ <b>Не удалось определить эпоху</b>
+    encoded_query = urllib.parse.quote(text[:50])
+    search_apple = f"https://music.apple.com/search?term={encoded_query}"
+    search_yandex = f"https://music.yandex.ru/search?text={encoded_query}"
+    
+    message = f"""⚠️ <b>Не удалось определить эпоху</b>
 
 Я не нашел композитора <b>«{text[:50]}»</b> в своей базе данных и не смог определить год.
 
@@ -246,7 +514,11 @@ def format_unknown_response(text: str) -> str:
 • Полное имя композитора
 • Год создания произведения (например, 1824)
 
-Пример: <i>«Бетховен Симфония №9 1824»</i>"""
+Пример: <i>«Бетховен Симфония №9 1824»</i>
+
+Вы можете поискать музыку в сервисах ниже:"""
+    
+    return message, search_apple, search_yandex
 
 # ===================== ОБРАБОТЧИКИ КОМАНД =====================
 
@@ -255,18 +527,19 @@ async def start(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     welcome_text = f"""👋 <b>Привет, {user.first_name}!</b>
 
 Я — <b>ClassicalEraBot</b> 🎼
-Я помогаю распределять классическую музыку по историческим эпохам и даю ссылки на плейлисты в Apple Music.
+Я помогаю распределять классическую музыку по историческим эпохам и даю ссылки на плейлисты в Apple Music и Яндекс Музыке.
 
 <b>Как я работаю:</b>
 1️⃣ Отправь мне название произведения или имя композитора
-2️⃣ Я найду композитора в базе данных
-3️⃣ Определю эпоху и дам ссылку на плейлист
+2️⃣ Я найду композитора в базе данных (более 150 композиторов!)
+3️⃣ Определю эпоху и дам ссылки на плейлисты
 
 <b>Примеры запросов:</b>
 • <i>«Лунная соната»</i>
 • <i>«Бах Токката и фуга»</i>
 • <i>«Чайковский Лебединое озеро»</i>
 • <i>«Шостакович Симфония №7 1941»</i>
+• <i>«Рахманинов Концерт №2»</i>
 
 Используй команду /help для подробной информации."""
     
@@ -289,6 +562,7 @@ async def help_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> No
 • <i>«Бах»</i> → Барокко
 • <i>«Дебюсси Лунный свет»</i> → Модерн
 • <i>«Шопен Ноктюрн»</i> → Романтизм
+• <i>«Рахманинов»</i> → Романтизм
 
 <b>Команды:</b>
 /start - Приветствие
@@ -305,7 +579,7 @@ async def eras_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> No
     for key, era in ERAS.items():
         eras_text += f"{era['emoji']} <b>{era['name']}</b>\n"
         eras_text += f"   📅 {era['year_start']}–{era['year_end']}\n"
-        eras_text += f"   🎵 <a href='{era['playlist_link']}'>Плейлист Apple Music</a>\n\n"
+        eras_text += f"   🎵 <a href='{era['playlist_apple']}'>Apple Music</a> | <a href='{era['playlist_yandex']}'>Яндекс Музыка</a>\n\n"
     
     await update.message.reply_text(eras_text, parse_mode='HTML', disable_web_page_preview=True)
 
@@ -313,13 +587,24 @@ async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE) -> 
     user_text = update.message.text
     logger.info(f"Получено сообщение: {user_text}")
     
+    context.user_data['last_query'] = user_text
+    
     composer_name, composer_data = find_composer_in_text(user_text)
     
     if composer_name and composer_data:
         era_key = composer_data.get("era")
         if era_key and ERAS.get(era_key):
-            response = format_response(composer_name, era_key, composer_data)
-            await update.message.reply_text(response, parse_mode='HTML', disable_web_page_preview=False)
+            message, apple_url, yandex_url = format_response(composer_name, era_key, composer_data, user_text)
+            
+            keyboard = [
+                [
+                    InlineKeyboardButton("🍎 Apple Music", url=apple_url),
+                    InlineKeyboardButton("🎵 Яндекс Музыка", url=yandex_url)
+                ]
+            ]
+            reply_markup = InlineKeyboardMarkup(keyboard)
+            
+            await update.message.reply_text(message, parse_mode='HTML', reply_markup=reply_markup, disable_web_page_preview=False)
             logger.info(f"Определен композитор {composer_name} → {era_key}")
             return
     
@@ -327,13 +612,31 @@ async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE) -> 
     if year:
         era_key = get_era_by_year(year)
         if era_key:
-            response = format_unknown_response(user_text)
-            await update.message.reply_text(response, parse_mode='HTML', disable_web_page_preview=False)
+            message, apple_url, yandex_url = format_unknown_response(user_text)
+            
+            keyboard = [
+                [
+                    InlineKeyboardButton("🍎 Apple Music", url=apple_url),
+                    InlineKeyboardButton("🎵 Яндекс Музыка", url=yandex_url)
+                ]
+            ]
+            reply_markup = InlineKeyboardMarkup(keyboard)
+            
+            await update.message.reply_text(message, parse_mode='HTML', reply_markup=reply_markup, disable_web_page_preview=False)
             logger.info(f"Определена эпоха по году {year} → {era_key}")
             return
     
-    response = format_unknown_response(user_text)
-    await update.message.reply_text(response, parse_mode='HTML')
+    message, apple_url, yandex_url = format_unknown_response(user_text)
+    
+    keyboard = [
+        [
+            InlineKeyboardButton("🍎 Apple Music", url=apple_url),
+            InlineKeyboardButton("🎵 Яндекс Музыка", url=yandex_url)
+        ]
+    ]
+    reply_markup = InlineKeyboardMarkup(keyboard)
+    
+    await update.message.reply_text(message, parse_mode='HTML', reply_markup=reply_markup)
     logger.warning(f"Не удалось определить эпоху для: {user_text}")
 
 async def button_callback(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
@@ -350,6 +653,7 @@ async def button_callback(update: Update, context: ContextTypes.DEFAULT_TYPE) ->
 • Моцарт Реквием → Классицизм
 • Бах → Барокко
 • Дебюсси → Модерн
+• Рахманинов → Романтизм
 
 <b>Если я не узнал композитора:</b>
 Укажи год создания (например, 1824)""",
@@ -372,7 +676,6 @@ async def error_handler(update: Update, context: ContextTypes.DEFAULT_TYPE) -> N
 # ===================== ЗАПУСК БОТА =====================
 
 def main() -> None:
-    """Запуск бота"""
     logger.info("🚀 Бот запускается...")
     logger.info(f"📋 Токен: {BOT_TOKEN[:10]}... (скрыто для безопасности)")
     
