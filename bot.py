@@ -1,24 +1,29 @@
 """
 TELEGRAM-БОТ ДЛЯ РАСПРЕДЕЛЕНИЯ КЛАССИЧЕСКОЙ МУЗЫКИ ПО ЭПОХАМ
-Версия: PythonAnywhere (с threaded=False для бесплатного тарифа)
-Требования: Python 3.10+, библиотеки python-telegram-bot==20.7
+Версия: Bothost (с поддержкой переменных окружения)
 """
 
-import json
+import os
 import re
 import logging
 from datetime import datetime
-from typing import Dict, List, Optional, Tuple
+from typing import Dict, Optional, Tuple
 
 from telegram import Update, InlineKeyboardButton, InlineKeyboardMarkup
 from telegram.ext import Application, CommandHandler, MessageHandler, filters, ContextTypes, CallbackQueryHandler
 
 # ===================== НАСТРОЙКИ =====================
-# ВСТАВЬ СВОЙ ТОКЕН СЮДА
-import os
-BOT_TOKEN = os.environ.get("8924352933:AAFeg484651o6c42hlgc6a-21GQXNrCF1io")
+# Читаем токен из переменной окружения BOT_TOKEN
+BOT_TOKEN = os.environ.get("BOT_TOKEN")
 
-# Настройка логирования (для отслеживания ошибок на PythonAnywhere)
+# Проверяем, что токен не пустой
+if not BOT_TOKEN:
+    raise ValueError(
+        "❌ Токен не найден! Установите переменную окружения BOT_TOKEN\n"
+        "В панели Bothost добавьте переменную окружения BOT_TOKEN с вашим токеном от @BotFather"
+    )
+
+# Настройка логирования
 logging.basicConfig(
     format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',
     level=logging.INFO
@@ -27,7 +32,6 @@ logger = logging.getLogger(__name__)
 
 # ===================== СПРАВОЧНИКИ =====================
 
-# Эпохи с временными границами и ссылками на плейлисты Apple Music
 ERAS = {
     "medieval": {
         "name": "Ранняя музыка (Medieval / Renaissance)",
@@ -79,15 +83,11 @@ ERAS = {
     }
 }
 
-# База данных композиторов с годами жизни
 COMPOSERS_DB = {
-    # Ранняя музыка
     "машо": {"era": "medieval", "birth": 1300, "death": 1377},
     "ландини": {"era": "medieval", "birth": 1325, "death": 1397},
     "данстейбл": {"era": "medieval", "birth": 1390, "death": 1453},
     "таллис": {"era": "medieval", "birth": 1505, "death": 1585},
-    
-    # Барокко
     "монтеверди": {"era": "baroque", "birth": 1567, "death": 1643},
     "пёрселл": {"era": "baroque", "birth": 1659, "death": 1695},
     "перселл": {"era": "baroque", "birth": 1659, "death": 1695},
@@ -97,8 +97,6 @@ COMPOSERS_DB = {
     "händel": {"era": "baroque", "birth": 1685, "death": 1759},
     "скарлатти": {"era": "baroque", "birth": 1685, "death": 1757},
     "рамо": {"era": "baroque", "birth": 1683, "death": 1764},
-    
-    # Классицизм
     "глюк": {"era": "classical", "birth": 1714, "death": 1787},
     "гайдн": {"era": "classical", "birth": 1732, "death": 1809},
     "haydn": {"era": "classical", "birth": 1732, "death": 1809},
@@ -109,8 +107,6 @@ COMPOSERS_DB = {
     "сальери": {"era": "classical", "birth": 1750, "death": 1825},
     "к.ф.э. бах": {"era": "classical", "birth": 1714, "death": 1788},
     "c.p.e. bach": {"era": "classical", "birth": 1714, "death": 1788},
-    
-    # Романтизм
     "шуберт": {"era": "romantic", "birth": 1797, "death": 1828},
     "schubert": {"era": "romantic", "birth": 1797, "death": 1828},
     "шопен": {"era": "romantic", "birth": 1810, "death": 1849},
@@ -131,10 +127,7 @@ COMPOSERS_DB = {
     "grieg": {"era": "romantic", "birth": 1843, "death": 1907},
     "малер": {"era": "romantic", "birth": 1860, "death": 1911},
     "mahler": {"era": "romantic", "birth": 1860, "death": 1911},
-    "шuman": {"era": "romantic", "birth": 1810, "death": 1856},
     "schumann": {"era": "romantic", "birth": 1810, "death": 1856},
-    
-    # Модерн
     "дебюсси": {"era": "modern", "birth": 1862, "death": 1918},
     "debussy": {"era": "modern", "birth": 1862, "death": 1918},
     "равель": {"era": "modern", "birth": 1875, "death": 1937},
@@ -151,8 +144,6 @@ COMPOSERS_DB = {
     "shostakovich": {"era": "modern", "birth": 1906, "death": 1975},
     "копленд": {"era": "modern", "birth": 1900, "death": 1990},
     "copland": {"era": "modern", "birth": 1900, "death": 1990},
-    
-    # Контемпорари
     "мессиан": {"era": "contemporary", "birth": 1908, "death": 1992},
     "messiaen": {"era": "contemporary", "birth": 1908, "death": 1992},
     "булез": {"era": "contemporary", "birth": 1925, "death": 2016},
@@ -174,13 +165,11 @@ COMPOSERS_DB = {
 # ===================== ВСПОМОГАТЕЛЬНЫЕ ФУНКЦИИ =====================
 
 def normalize_text(text: str) -> str:
-    """Очищает текст от лишних символов и приводит к нижнему регистру"""
     text = re.sub(r'[^\w\s]', ' ', text)
     text = re.sub(r'\s+', ' ', text)
     return text.lower().strip()
 
 def find_composer_in_text(text: str) -> Tuple[Optional[str], Optional[Dict]]:
-    """Ищет композитора в тексте по базе данных"""
     normalized = normalize_text(text)
     words = normalized.split()
     
@@ -188,17 +177,13 @@ def find_composer_in_text(text: str) -> Tuple[Optional[str], Optional[Dict]]:
         composer_lower = composer.lower()
         if composer_lower in normalized:
             return composer, data
-        
         if len(composer_lower) > 5:
-            parts = composer_lower.split()
-            for part in parts:
+            for part in composer_lower.split():
                 if len(part) > 3 and part in words:
                     return composer, data
-    
     return None, None
 
 def find_year_in_text(text: str) -> Optional[int]:
-    """Ищет четырехзначное число (год) в тексте"""
     pattern = r'\b(1[0-9]{3}|2[0-9]{3})\b'
     matches = re.findall(pattern, text)
     if matches:
@@ -206,14 +191,12 @@ def find_year_in_text(text: str) -> Optional[int]:
     return None
 
 def get_era_by_year(year: int) -> Optional[str]:
-    """Определяет эпоху по году"""
     for era_key, era_data in ERAS.items():
         if era_data["year_start"] <= year <= era_data["year_end"]:
             return era_key
     return None
 
 def format_response(composer_name: str, era_key: str, composer_data: Dict = None) -> str:
-    """Формирует красивое сообщение для пользователя"""
     era_data = ERAS.get(era_key)
     if not era_data:
         return "⚠️ Не удалось определить эпоху. Пожалуйста, уточните данные."
@@ -238,13 +221,10 @@ def format_response(composer_name: str, era_key: str, composer_data: Dict = None
 ✅ <b>Трек добавлен в плейлист «{era_data['name_en']}»</b>
 
 🎵 <a href="{era_data['playlist_link']}">Слушать в Apple Music</a>"""
-    
     return message
 
 def format_unknown_response(text: str) -> str:
-    """Формирует сообщение для неизвестного композитора"""
     year = find_year_in_text(text)
-    
     if year:
         era_key = get_era_by_year(year)
         if era_key:
@@ -268,19 +248,9 @@ def format_unknown_response(text: str) -> str:
 
 Пример: <i>«Бетховен Симфония №9 1824»</i>"""
 
-def get_eras_list() -> str:
-    """Возвращает список всех эпох для справки"""
-    result = "<b>📚 Доступные эпохи:</b>\n\n"
-    for key, era in ERAS.items():
-        result += f"{era['emoji']} <b>{era['name']}</b>\n"
-        result += f"   📅 {era['year_start']}–{era['year_end']}\n"
-        result += f"   🎵 <a href='{era['playlist_link']}'>Плейлист Apple Music</a>\n\n"
-    return result
-
 # ===================== ОБРАБОТЧИКИ КОМАНД =====================
 
 async def start(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
-    """Обработчик команды /start"""
     user = update.effective_user
     welcome_text = f"""👋 <b>Привет, {user.first_name}!</b>
 
@@ -298,8 +268,7 @@ async def start(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
 • <i>«Чайковский Лебединое озеро»</i>
 • <i>«Шостакович Симфония №7 1941»</i>
 
-Используй команду /help для подробной информации.
-Команда /eras покажет все доступные эпохи и плейлисты."""
+Используй команду /help для подробной информации."""
     
     keyboard = [
         [InlineKeyboardButton("📖 Помощь", callback_data="help")],
@@ -310,7 +279,6 @@ async def start(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     await update.message.reply_text(welcome_text, parse_mode='HTML', reply_markup=reply_markup)
 
 async def help_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
-    """Обработчик команды /help"""
     help_text = """📖 <b>Справка по боту</b>
 
 <b>Как пользоваться:</b>
@@ -322,15 +290,10 @@ async def help_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> No
 • <i>«Дебюсси Лунный свет»</i> → Модерн
 • <i>«Шопен Ноктюрн»</i> → Романтизм
 
-<b>Что я умею:</b>
-✅ Распознавать композиторов по фамилии
-✅ Определять эпоху по году (если указан)
-✅ Давать ссылки на плейлисты в Apple Music
-
 <b>Команды:</b>
 /start - Приветствие
 /help - Эта справка
-/eras - Список всех эпох и плейлистов
+/eras - Список всех эпох
 
 <b>Если я не узнал композитора:</b>
 Укажи год создания произведения, и я определю эпоху по дате!"""
@@ -338,31 +301,26 @@ async def help_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> No
     await update.message.reply_text(help_text, parse_mode='HTML')
 
 async def eras_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
-    """Обработчик команды /eras - показывает все эпохи и ссылки на плейлисты"""
-    eras_text = get_eras_list()
+    eras_text = "<b>📚 Доступные эпохи:</b>\n\n"
+    for key, era in ERAS.items():
+        eras_text += f"{era['emoji']} <b>{era['name']}</b>\n"
+        eras_text += f"   📅 {era['year_start']}–{era['year_end']}\n"
+        eras_text += f"   🎵 <a href='{era['playlist_link']}'>Плейлист Apple Music</a>\n\n"
     
-    keyboard = [
-        [InlineKeyboardButton("🔙 Назад", callback_data="start")]
-    ]
-    reply_markup = InlineKeyboardMarkup(keyboard)
-    
-    await update.message.reply_text(eras_text, parse_mode='HTML', reply_markup=reply_markup, disable_web_page_preview=True)
+    await update.message.reply_text(eras_text, parse_mode='HTML', disable_web_page_preview=True)
 
 async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
-    """Основной обработчик текстовых сообщений"""
     user_text = update.message.text
-    logger.info(f"Получено сообщение от {update.effective_user.username}: {user_text}")
+    logger.info(f"Получено сообщение: {user_text}")
     
     composer_name, composer_data = find_composer_in_text(user_text)
     
     if composer_name and composer_data:
         era_key = composer_data.get("era")
-        era_data = ERAS.get(era_key)
-        
-        if era_data:
+        if era_key and ERAS.get(era_key):
             response = format_response(composer_name, era_key, composer_data)
             await update.message.reply_text(response, parse_mode='HTML', disable_web_page_preview=False)
-            logger.info(f"Определен композитор {composer_name} → эпоха {era_key}")
+            logger.info(f"Определен композитор {composer_name} → {era_key}")
             return
     
     year = find_year_in_text(user_text)
@@ -379,12 +337,12 @@ async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE) -> 
     logger.warning(f"Не удалось определить эпоху для: {user_text}")
 
 async def button_callback(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
-    """Обработчик нажатий на инлайн-кнопки"""
     query = update.callback_query
     await query.answer()
     
     if query.data == "help":
-        help_text = """📖 <b>Справка</b>
+        await query.edit_message_text(
+            """📖 <b>Справка</b>
 
 Отправь мне название произведения или имя композитора.
 
@@ -394,65 +352,41 @@ async def button_callback(update: Update, context: ContextTypes.DEFAULT_TYPE) ->
 • Дебюсси → Модерн
 
 <b>Если я не узнал композитора:</b>
-Укажи год создания (например, 1824)"""
-        await query.edit_message_text(help_text, parse_mode='HTML')
-    
+Укажи год создания (например, 1824)""",
+            parse_mode='HTML'
+        )
     elif query.data == "eras":
-        eras_text = get_eras_list()
-        await query.edit_message_text(eras_text, parse_mode='HTML', disable_web_page_preview=True)
-    
-    elif query.data == "start":
-        welcome_text = """👋 <b>Главное меню</b>
-
-Я помогаю распределять классическую музыку по эпохам.
-
-<b>Просто отправь мне:</b>
-• Имя композитора
-• Название произведения
-• Или год создания
-
-Я найду нужную эпоху и покажу плейлист в Apple Music!"""
-        await query.edit_message_text(welcome_text, parse_mode='HTML')
+        eras_text = "<b>📚 Доступные эпохи:</b>\n\n"
+        for key, era in ERAS.items():
+            eras_text += f"{era['emoji']} <b>{era['name']}</b>\n"
+            eras_text += f"   📅 {era['year_start']}–{era['year_end']}\n"
+        await query.edit_message_text(eras_text, parse_mode='HTML')
 
 async def error_handler(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
-    """Обработчик ошибок"""
     logger.error(f"Ошибка: {context.error}")
     if update and update.effective_message:
         await update.effective_message.reply_text(
-            "😅 Произошла ошибка. Пожалуйста, попробуйте еще раз или переформулируйте запрос."
+            "😅 Произошла ошибка. Пожалуйста, попробуйте еще раз."
         )
 
 # ===================== ЗАПУСК БОТА =====================
 
 def main() -> None:
     """Запуск бота"""
-    # Создаем приложение
+    logger.info("🚀 Бот запускается...")
+    logger.info(f"📋 Токен: {BOT_TOKEN[:10]}... (скрыто для безопасности)")
+    
     application = Application.builder().token(BOT_TOKEN).build()
     
-    # Регистрируем команды
     application.add_handler(CommandHandler("start", start))
     application.add_handler(CommandHandler("help", help_command))
     application.add_handler(CommandHandler("eras", eras_command))
-    
-    # Регистрируем обработчик текстовых сообщений
     application.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, handle_message))
-    
-    # Регистрируем обработчик кнопок
     application.add_handler(CallbackQueryHandler(button_callback))
-    
-    # Регистрируем обработчик ошибок
     application.add_error_handler(error_handler)
     
-    # Запускаем бота с threaded=False (важно для PythonAnywhere!)
-    print("🤖 Бот запущен! Нажмите Ctrl+C для остановки.")
-    print("📋 Доступные команды: /start, /help, /eras")
-    
-    # ВАЖНО: добавляем параметр allowed_updates чтобы уменьшить нагрузку
-    application.run_polling(
-        allowed_updates=Update.ALL_TYPES,
-        # на бесплатном тарифе PythonAnywhere нужно отключить threading
-        # это делается через параметр drop_pending_updates или без дополнительных настроек
-    )
+    logger.info("✅ Бот успешно инициализирован, запускаем polling...")
+    application.run_polling(allowed_updates=Update.ALL_TYPES)
 
 if __name__ == '__main__':
     main()
