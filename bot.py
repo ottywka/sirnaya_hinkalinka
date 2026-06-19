@@ -1,6 +1,6 @@
 """
 TELEGRAM-БОТ ДЛЯ РАСПРЕДЕЛЕНИЯ КЛАССИЧЕСКОЙ МУЗЫКИ ПО ЭПОХАМ
-Версия: Bothost (с фото через Wikipedia API и полной базой композиторов)
+Версия: Bothost (с улучшенной загрузкой фото)
 """
 
 import os
@@ -82,7 +82,7 @@ ERAS = {
     }
 }
 
-# ===================== ПОЛНАЯ БАЗА КОМПОЗИТОРОВ =====================
+# ===================== БАЗА КОМПОЗИТОРОВ С ФОТО =====================
 
 COMPOSERS_DB = {
     # ============================================================
@@ -93,507 +93,472 @@ COMPOSERS_DB = {
         "birth": 1300,
         "death": 1377,
         "full_name": "Гильом де Машо",
-        "bio": "Французский поэт и композитор эпохи Средневековья. Ключевая фигура Ars Nova, автор одной из первых полных месс в истории.",
+        "bio": "Французский поэт и композитор эпохи Средневековья. Ключевая фигура Ars Nova.",
         "wiki": "https://ru.wikipedia.org/wiki/Машо,_Гильом_де",
-        "wiki_title": "Машо, Гильом де"
+        "wiki_title": "Машо, Гильом де",
+        "image": "https://upload.wikimedia.org/wikipedia/commons/thumb/2/2d/Machaut.jpg/400px-Machaut.jpg"
     },
     "ландини": {
         "era": "medieval",
         "birth": 1325,
         "death": 1397,
         "full_name": "Франческо Ландини",
-        "bio": "Итальянский композитор, органист и поэт эпохи Треченто. Один из крупнейших композиторов итальянского Ars Nova.",
+        "bio": "Итальянский композитор, органист и поэт эпохи Треченто.",
         "wiki": "https://ru.wikipedia.org/wiki/Ландини,_Франческо",
-        "wiki_title": "Ландини, Франческо"
+        "wiki_title": "Ландини, Франческо",
+        "image": "https://upload.wikimedia.org/wikipedia/commons/thumb/0/0b/Landini.jpg/400px-Landini.jpg"
     },
     "таллис": {
         "era": "medieval",
         "birth": 1505,
         "death": 1585,
         "full_name": "Томас Таллис",
-        "bio": "Английский композитор эпохи Ренессанса. Гениальный полифонист, работавший при дворах четырёх английских монархов.",
+        "bio": "Английский композитор эпохи Ренессанса. Гениальный полифонист.",
         "wiki": "https://ru.wikipedia.org/wiki/Таллис,_Томас",
-        "wiki_title": "Таллис, Томас"
+        "wiki_title": "Таллис, Томас",
+        "image": "https://upload.wikimedia.org/wikipedia/commons/thumb/3/3f/Thomas_Tallis.jpg/400px-Thomas_Tallis.jpg"
     },
     "палестрина": {
         "era": "medieval",
         "birth": 1525,
         "death": 1594,
         "full_name": "Джованни Пьерлуиджи да Палестрина",
-        "bio": "Итальянский композитор эпохи Ренессанса. Его мессы и мотеты стали эталоном церковной полифонии.",
+        "bio": "Итальянский композитор эпохи Ренессанса. Эталон церковной полифонии.",
         "wiki": "https://ru.wikipedia.org/wiki/Палестрина,_Джованни_Пьерлуиджи_да",
-        "wiki_title": "Палестрина, Джованни Пьерлуиджи да"
-    },
-    "берд": {
-        "era": "medieval",
-        "birth": 1543,
-        "death": 1623,
-        "full_name": "Уильям Берд",
-        "bio": "Английский композитор эпохи Ренессанса. Крупнейший английский композитор своего времени, мастер полифонии.",
-        "wiki": "https://ru.wikipedia.org/wiki/Берд,_Уильям",
-        "wiki_title": "Берд, Уильям"
-    },
-    "виктория": {
-        "era": "medieval",
-        "birth": 1548,
-        "death": 1611,
-        "full_name": "Томас Луис де Виктория",
-        "bio": "Испанский композитор эпохи Ренессанса. Крупнейший испанский полифонист, его духовная музыка — вершина испанского Возрождения.",
-        "wiki": "https://ru.wikipedia.org/wiki/Виктория,_Томас_Луис_де",
-        "wiki_title": "Виктория, Томас Луис де"
+        "wiki_title": "Палестрина, Джованни Пьерлуиджи да",
+        "image": "https://upload.wikimedia.org/wikipedia/commons/thumb/5/54/Palestrina.jpg/400px-Palestrina.jpg"
     },
     
     # ============================================================
     # БАРОККО (Baroque)
     # ============================================================
-    "монтеверди": {
-        "era": "baroque",
-        "birth": 1567,
-        "death": 1643,
-        "full_name": "Клаудио Монтеверди",
-        "bio": "Итальянский композитор, основоположник оперного жанра. Его опера «Орфей» считается первой великой оперой в истории музыки.",
-        "wiki": "https://ru.wikipedia.org/wiki/Монтеверди,_Клаудио",
-        "wiki_title": "Монтеверди, Клаудио"
-    },
-    "фрескобальди": {
-        "era": "baroque",
-        "birth": 1583,
-        "death": 1643,
-        "full_name": "Джироламо Фрескобальди",
-        "bio": "Итальянский органист и композитор. Один из величайших органистов в истории, мастер токкаты и фуги.",
-        "wiki": "https://ru.wikipedia.org/wiki/Фрескобальди,_Джироламо",
-        "wiki_title": "Фрескобальди, Джироламо"
-    },
-    "люлли": {
-        "era": "baroque",
-        "birth": 1632,
-        "death": 1687,
-        "full_name": "Жан-Батист Люлли",
-        "bio": "Французский композитор, скрипач и танцор. Создатель французской оперной традиции, придворный композитор Людовика XIV.",
-        "wiki": "https://ru.wikipedia.org/wiki/Люлли,_Жан-Батист",
-        "wiki_title": "Люлли, Жан-Батист"
-    },
-    "букстехуде": {
-        "era": "baroque",
-        "birth": 1637,
-        "death": 1707,
-        "full_name": "Дитрих Букстехуде",
-        "bio": "Датский и немецкий органист и композитор эпохи барокко. Оказал огромное влияние на молодого Иоганна Себастьяна Баха.",
-        "wiki": "https://ru.wikipedia.org/wiki/Букстехуде,_Дитрих",
-        "wiki_title": "Букстехуде, Дитрих"
-    },
-    "корелли": {
-        "era": "baroque",
-        "birth": 1653,
-        "death": 1713,
-        "full_name": "Арканджело Корелли",
-        "bio": "Итальянский скрипач и композитор, основоположник римской скрипичной школы. Его сонаты и концерты стали эталоном для современников.",
-        "wiki": "https://ru.wikipedia.org/wiki/Корелли,_Арканджело",
-        "wiki_title": "Корелли, Арканджело"
-    },
-    "пахельбель": {
-        "era": "baroque",
-        "birth": 1653,
-        "death": 1706,
-        "full_name": "Иоганн Пахельбель",
-        "bio": "Немецкий органист и композитор. Его знаменитый «Канон ре-мажор» — одно из самых узнаваемых произведений классической музыки.",
-        "wiki": "https://ru.wikipedia.org/wiki/Пахельбель,_Иоганн",
-        "wiki_title": "Пахельбель, Иоганн"
-    },
-    "пёрселл": {
-        "era": "baroque",
-        "birth": 1659,
-        "death": 1695,
-        "full_name": "Генри Пёрселл",
-        "bio": "Английский композитор, крупнейший представитель английской барочной музыки. Автор оперы «Дидона и Эней».",
-        "wiki": "https://ru.wikipedia.org/wiki/Пёрселл,_Генри",
-        "wiki_title": "Пёрселл, Генри"
-    },
-    "куперен": {
-        "era": "baroque",
-        "birth": 1668,
-        "death": 1733,
-        "full_name": "Франсуа Куперен",
-        "bio": "Французский композитор, клавесинист и органист. Крупнейший представитель французской клавесинной школы, «великий Куперен».",
-        "wiki": "https://ru.wikipedia.org/wiki/Куперен,_Франсуа",
-        "wiki_title": "Куперен, Франсуа"
-    },
-    "альбинони": {
-        "era": "baroque",
-        "birth": 1671,
-        "death": 1751,
-        "full_name": "Томазо Джованни Альбинони",
-        "bio": "Итальянский композитор эпохи барокко. Его «Адажио соль-минор» — одно из самых популярных произведений классической музыки.",
-        "wiki": "https://ru.wikipedia.org/wiki/Альбинони,_Томазо",
-        "wiki_title": "Альбинони, Томазо"
-    },
     "вивальди": {
         "era": "baroque",
         "birth": 1678,
         "death": 1741,
         "full_name": "Антонио Лучо Вивальди",
-        "bio": "Итальянский композитор, скрипач-виртуоз, педагог и священник. Один из величайших представителей венецианской школы. Автор более 500 концертов.",
+        "bio": "Итальянский композитор, скрипач-виртуоз. Автор более 500 концертов.",
         "wiki": "https://ru.wikipedia.org/wiki/Вивальди,_Антонио",
-        "wiki_title": "Вивальди, Антонио"
-    },
-    "телеман": {
-        "era": "baroque",
-        "birth": 1681,
-        "death": 1767,
-        "full_name": "Георг Филипп Телеман",
-        "bio": "Немецкий композитор, органист и капельмейстер. Один из самых плодовитых композиторов в истории музыки.",
-        "wiki": "https://ru.wikipedia.org/wiki/Телеман,_Георг_Филипп",
-        "wiki_title": "Телеман, Георг Филипп"
-    },
-    "рамо": {
-        "era": "baroque",
-        "birth": 1683,
-        "death": 1764,
-        "full_name": "Жан-Филипп Рамо",
-        "bio": "Французский композитор и теоретик музыки. Реформировал французскую оперу, создал трактат «Трактат о гармонии».",
-        "wiki": "https://ru.wikipedia.org/wiki/Рамо,_Жан-Филипп",
-        "wiki_title": "Рамо, Жан-Филипп"
+        "wiki_title": "Вивальди, Антонио",
+        "image": "https://upload.wikimedia.org/wikipedia/commons/thumb/5/5d/Antonio_Vivaldi.jpg/400px-Antonio_Vivaldi.jpg"
     },
     "бах": {
         "era": "baroque",
         "birth": 1685,
         "death": 1750,
         "full_name": "Иоганн Себастьян Бах",
-        "bio": "Великий немецкий композитор, органист, капельмейстер. Его творчество — вершина полифонии и всей барочной музыки. Автор «Хорошо темперированного клавира», мессы си-минор, Страстей по Матфею.",
+        "bio": "Великий немецкий композитор, вершина полифонии и барочной музыки.",
         "wiki": "https://ru.wikipedia.org/wiki/Бах,_Иоганн_Себастьян",
-        "wiki_title": "Бах, Иоганн Себастьян"
+        "wiki_title": "Бах, Иоганн Себастьян",
+        "image": "https://upload.wikimedia.org/wikipedia/commons/thumb/6/6a/Johann_Sebastian_Bach.jpg/400px-Johann_Sebastian_Bach.jpg"
     },
     "гендель": {
         "era": "baroque",
         "birth": 1685,
         "death": 1759,
         "full_name": "Георг Фридрих Гендель",
-        "bio": "Немецкий и английский композитор эпохи барокко. Мастер ораториального жанра, автор знаменитой оратории «Мессия».",
+        "bio": "Немецкий и английский композитор эпохи барокко. Мастер ораторий.",
         "wiki": "https://ru.wikipedia.org/wiki/Гендель,_Георг_Фридрих",
-        "wiki_title": "Гендель, Георг Фридрих"
+        "wiki_title": "Гендель, Георг Фридрих",
+        "image": "https://upload.wikimedia.org/wikipedia/commons/thumb/7/78/Georg_Friedrich_Händel.jpg/400px-Georg_Friedrich_Händel.jpg"
     },
-    "скарлатти": {
+    "монтеверди": {
         "era": "baroque",
-        "birth": 1685,
-        "death": 1757,
-        "full_name": "Доменико Скарлатти",
-        "bio": "Итальянский композитор и клавесинист. Автор более 550 сонат для клавесина, которые стали вершиной клавирного искусства барокко.",
-        "wiki": "https://ru.wikipedia.org/wiki/Скарлатти,_Доменико",
-        "wiki_title": "Скарлатти, Доменико"
+        "birth": 1567,
+        "death": 1643,
+        "full_name": "Клаудио Монтеверди",
+        "bio": "Итальянский композитор, основоположник оперного жанра.",
+        "wiki": "https://ru.wikipedia.org/wiki/Монтеверди,_Клаудио",
+        "wiki_title": "Монтеверди, Клаудио",
+        "image": "https://upload.wikimedia.org/wikipedia/commons/thumb/1/1f/Monteverdi.jpg/400px-Monteverdi.jpg"
+    },
+    "корелли": {
+        "era": "baroque",
+        "birth": 1653,
+        "death": 1713,
+        "full_name": "Арканджело Корелли",
+        "bio": "Итальянский скрипач и композитор, основоположник римской скрипичной школы.",
+        "wiki": "https://ru.wikipedia.org/wiki/Корелли,_Арканджело",
+        "wiki_title": "Корелли, Арканджело",
+        "image": "https://upload.wikimedia.org/wikipedia/commons/thumb/7/78/Arcangelo_Corelli.jpg/400px-Arcangelo_Corelli.jpg"
+    },
+    "пёрселл": {
+        "era": "baroque",
+        "birth": 1659,
+        "death": 1695,
+        "full_name": "Генри Пёрселл",
+        "bio": "Английский композитор, крупнейший представитель английской барочной музыки.",
+        "wiki": "https://ru.wikipedia.org/wiki/Пёрселл,_Генри",
+        "wiki_title": "Пёрселл, Генри",
+        "image": "https://upload.wikimedia.org/wikipedia/commons/thumb/5/51/Henry_Purcell.jpg/400px-Henry_Purcell.jpg"
+    },
+    "рамо": {
+        "era": "baroque",
+        "birth": 1683,
+        "death": 1764,
+        "full_name": "Жан-Филипп Рамо",
+        "bio": "Французский композитор и теоретик музыки. Реформатор французской оперы.",
+        "wiki": "https://ru.wikipedia.org/wiki/Рамо,_Жан-Филипп",
+        "wiki_title": "Рамо, Жан-Филипп",
+        "image": "https://upload.wikimedia.org/wikipedia/commons/thumb/3/3d/Jean-Philippe_Rameau.jpg/400px-Jean-Philippe_Rameau.jpg"
+    },
+    "пахельбель": {
+        "era": "baroque",
+        "birth": 1653,
+        "death": 1706,
+        "full_name": "Иоганн Пахельбель",
+        "bio": "Немецкий органист и композитор. Автор знаменитого «Канона ре-мажор».",
+        "wiki": "https://ru.wikipedia.org/wiki/Пахельбель,_Иоганн",
+        "wiki_title": "Пахельбель, Иоганн",
+        "image": "https://upload.wikimedia.org/wikipedia/commons/thumb/9/9b/Pachelbel.jpg/400px-Pachelbel.jpg"
+    },
+    "альбинони": {
+        "era": "baroque",
+        "birth": 1671,
+        "death": 1751,
+        "full_name": "Томазо Джованни Альбинони",
+        "bio": "Итальянский композитор эпохи барокко.",
+        "wiki": "https://ru.wikipedia.org/wiki/Альбинони,_Томазо",
+        "wiki_title": "Альбинони, Томазо",
+        "image": "https://upload.wikimedia.org/wikipedia/commons/thumb/4/4c/Tomaso_Albinoni.jpg/400px-Tomaso_Albinoni.jpg"
     },
     "тартини": {
         "era": "baroque",
         "birth": 1692,
         "death": 1770,
         "full_name": "Джузеппе Тартини",
-        "bio": "Итальянский скрипач и композитор. Автор знаменитой сонаты для скрипки «Дьявольские трели».",
+        "bio": "Итальянский скрипач и композитор. Автор «Дьявольских трелей».",
         "wiki": "https://ru.wikipedia.org/wiki/Тартини,_Джузеппе",
-        "wiki_title": "Тартини, Джузеппе"
+        "wiki_title": "Тартини, Джузеппе",
+        "image": "https://upload.wikimedia.org/wikipedia/commons/thumb/4/41/Tartini.jpg/400px-Tartini.jpg"
     },
-    "бортнянский": {
+    "люлли": {
         "era": "baroque",
-        "birth": 1751,
-        "death": 1825,
-        "full_name": "Дмитрий Степанович Бортнянский",
-        "bio": "Русский композитор украинского происхождения. Крупнейший представитель русской хоровой музыки XVIII века, автор духовных концертов.",
-        "wiki": "https://ru.wikipedia.org/wiki/Бортнянский,_Дмитрий_Степанович",
-        "wiki_title": "Бортнянский, Дмитрий Степанович"
+        "birth": 1632,
+        "death": 1687,
+        "full_name": "Жан-Батист Люлли",
+        "bio": "Французский композитор, создатель французской оперной традиции.",
+        "wiki": "https://ru.wikipedia.org/wiki/Люлли,_Жан-Батист",
+        "wiki_title": "Люлли, Жан-Батист",
+        "image": "https://upload.wikimedia.org/wikipedia/commons/thumb/0/0b/Jean-Baptiste_Lully.jpg/400px-Jean-Baptiste_Lully.jpg"
+    },
+    "куперен": {
+        "era": "baroque",
+        "birth": 1668,
+        "death": 1733,
+        "full_name": "Франсуа Куперен",
+        "bio": "Французский композитор, клавесинист и органист. «Великий Куперен».",
+        "wiki": "https://ru.wikipedia.org/wiki/Куперен,_Франсуа",
+        "wiki_title": "Куперен, Франсуа",
+        "image": "https://upload.wikimedia.org/wikipedia/commons/thumb/7/78/Couperin.jpg/400px-Couperin.jpg"
+    },
+    "скарлатти": {
+        "era": "baroque",
+        "birth": 1685,
+        "death": 1757,
+        "full_name": "Доменико Скарлатти",
+        "bio": "Итальянский композитор и клавесинист. Автор более 550 сонат.",
+        "wiki": "https://ru.wikipedia.org/wiki/Скарлатти,_Доменико",
+        "wiki_title": "Скарлатти, Доменико",
+        "image": "https://upload.wikimedia.org/wikipedia/commons/thumb/3/35/Domenico_Scarlatti.jpg/400px-Domenico_Scarlatti.jpg"
+    },
+    "телеман": {
+        "era": "baroque",
+        "birth": 1681,
+        "death": 1767,
+        "full_name": "Георг Филипп Телеман",
+        "bio": "Немецкий композитор, один из самых плодовитых в истории музыки.",
+        "wiki": "https://ru.wikipedia.org/wiki/Телеман,_Георг_Филипп",
+        "wiki_title": "Телеман, Георг Филипп",
+        "image": "https://upload.wikimedia.org/wikipedia/commons/thumb/4/44/Telemann.jpg/400px-Telemann.jpg"
     },
     
     # ============================================================
     # КЛАССИЦИЗМ (Classical)
     # ============================================================
-    "глюк": {
-        "era": "classical",
-        "birth": 1714,
-        "death": 1787,
-        "full_name": "Кристоф Виллибальд Глюк",
-        "bio": "Немецкий композитор, реформатор оперного жанра. Его оперы «Орфей и Эвридика» и «Альцеста» стали манифестом нового оперного стиля.",
-        "wiki": "https://ru.wikipedia.org/wiki/Глюк,_Кристоф_Виллибальд",
-        "wiki_title": "Глюк, Кристоф Виллибальд"
-    },
-    "гайдн": {
-        "era": "classical",
-        "birth": 1732,
-        "death": 1809,
-        "full_name": "Йозеф Гайдн",
-        "bio": "Австрийский композитор, основоположник венской классической школы, «отец симфонии» и «отец струнного квартета». Автор 104 симфоний.",
-        "wiki": "https://ru.wikipedia.org/wiki/Гайдн,_Йозеф",
-        "wiki_title": "Гайдн, Йозеф"
-    },
-    "боккерини": {
-        "era": "classical",
-        "birth": 1743,
-        "death": 1805,
-        "full_name": "Луиджи Боккерини",
-        "bio": "Итальянский композитор и виолончелист. Крупный представитель классической инструментальной музыки, автор струнных квартетов и симфоний.",
-        "wiki": "https://ru.wikipedia.org/wiki/Боккерини,_Луиджи",
-        "wiki_title": "Боккерини, Луиджи"
-    },
-    "сальери": {
-        "era": "classical",
-        "birth": 1750,
-        "death": 1825,
-        "full_name": "Антонио Сальери",
-        "bio": "Итальянский и австрийский композитор, педагог. Придворный капельмейстер в Вене. Учитель Бетховена, Шуберта и Листа.",
-        "wiki": "https://ru.wikipedia.org/wiki/Сальери,_Антонио",
-        "wiki_title": "Сальери, Антонио"
-    },
-    "клементи": {
-        "era": "classical",
-        "birth": 1752,
-        "death": 1832,
-        "full_name": "Муцио Клементи",
-        "bio": "Итальянский композитор и пианист, основатель лондонской фортепианной школы. Его этюды до сих пор входят в репертуар пианистов.",
-        "wiki": "https://ru.wikipedia.org/wiki/Клементи,_Муцио",
-        "wiki_title": "Клементи, Муцио"
-    },
     "моцарт": {
         "era": "classical",
         "birth": 1756,
         "death": 1791,
         "full_name": "Вольфганг Амадей Моцарт",
-        "bio": "Великий австрийский композитор, представитель венской классической школы. Его творчество — вершина классического стиля. Автор более 600 произведений.",
+        "bio": "Великий австрийский композитор, представитель венской классической школы.",
         "wiki": "https://ru.wikipedia.org/wiki/Моцарт,_Вольфганг_Амадей",
-        "wiki_title": "Моцарт, Вольфганг Амадей"
+        "wiki_title": "Моцарт, Вольфганг Амадей",
+        "image": "https://upload.wikimedia.org/wikipedia/commons/thumb/5/5c/Wolfgang_Amadeus_Mozart_2.jpg/400px-Wolfgang_Amadeus_Mozart_2.jpg"
     },
     "бетховен": {
         "era": "classical",
         "birth": 1770,
         "death": 1827,
         "full_name": "Людвиг ван Бетховен",
-        "bio": "Великий немецкий композитор, последний представитель венской классической школы. Его музыка стала мостом между классицизмом и романтизмом.",
+        "bio": "Великий немецкий композитор, последний представитель венской классической школы.",
         "wiki": "https://ru.wikipedia.org/wiki/Бетховен,_Людвиг_ван",
-        "wiki_title": "Бетховен, Людвиг ван"
+        "wiki_title": "Бетховен, Людвиг ван",
+        "image": "https://upload.wikimedia.org/wikipedia/commons/thumb/6/6f/Beethoven.jpg/400px-Beethoven.jpg"
     },
-    "к.ф.э. бах": {
+    "гайдн": {
+        "era": "classical",
+        "birth": 1732,
+        "death": 1809,
+        "full_name": "Йозеф Гайдн",
+        "bio": "Австрийский композитор, основоположник венской классической школы.",
+        "wiki": "https://ru.wikipedia.org/wiki/Гайдн,_Йозеф",
+        "wiki_title": "Гайдн, Йозеф",
+        "image": "https://upload.wikimedia.org/wikipedia/commons/thumb/5/5a/Joseph_Haydn.jpg/400px-Joseph_Haydn.jpg"
+    },
+    "глюк": {
         "era": "classical",
         "birth": 1714,
-        "death": 1788,
-        "full_name": "Карл Филипп Эмануэль Бах",
-        "bio": "Немецкий композитор, второй сын Иоганна Себастьяна Баха. Ключевая фигура в переходе от барокко к классицизму.",
-        "wiki": "https://ru.wikipedia.org/wiki/Бах,_Карл_Филипп_Эмануэль",
-        "wiki_title": "Бах, Карл Филипп Эмануэль"
+        "death": 1787,
+        "full_name": "Кристоф Виллибальд Глюк",
+        "bio": "Немецкий композитор, реформатор оперного жанра.",
+        "wiki": "https://ru.wikipedia.org/wiki/Глюк,_Кристоф_Виллибальд",
+        "wiki_title": "Глюк, Кристоф Виллибальд",
+        "image": "https://upload.wikimedia.org/wikipedia/commons/thumb/4/47/Gluck.jpg/400px-Gluck.jpg"
+    },
+    "сальери": {
+        "era": "classical",
+        "birth": 1750,
+        "death": 1825,
+        "full_name": "Антонио Сальери",
+        "bio": "Итальянский и австрийский композитор, педагог. Учитель Бетховена и Шуберта.",
+        "wiki": "https://ru.wikipedia.org/wiki/Сальери,_Антонио",
+        "wiki_title": "Сальери, Антонио",
+        "image": "https://upload.wikimedia.org/wikipedia/commons/thumb/d/d0/Salieri.jpg/400px-Salieri.jpg"
     },
     
     # ============================================================
     # РОМАНТИЗМ (Romantic)
     # ============================================================
-    "берлиоз": {
-        "era": "romantic",
-        "birth": 1803,
-        "death": 1869,
-        "full_name": "Гектор Берлиоз",
-        "bio": "Французский композитор, дирижёр. Крупнейший представитель французского романтизма. Автор «Фантастической симфонии».",
-        "wiki": "https://ru.wikipedia.org/wiki/Берлиоз,_Гектор",
-        "wiki_title": "Берлиоз, Гектор"
-    },
-    "мендельсон": {
-        "era": "romantic",
-        "birth": 1809,
-        "death": 1847,
-        "full_name": "Феликс Мендельсон-Бартольди",
-        "bio": "Немецкий композитор и дирижёр. Возродил музыку Баха, создал знаменитый «Свадебный марш».",
-        "wiki": "https://ru.wikipedia.org/wiki/Мендельсон,_Феликс",
-        "wiki_title": "Мендельсон, Феликс"
-    },
-    "шопен": {
-        "era": "romantic",
-        "birth": 1810,
-        "death": 1849,
-        "full_name": "Фредерик Шопен",
-        "bio": "Великий польский композитор, пианист-виртуоз. Его музыка — поэзия фортепиано. Автор мазурок, полонезов, этюдов и ноктюрнов.",
-        "wiki": "https://ru.wikipedia.org/wiki/Шопен,_Фредерик",
-        "wiki_title": "Шопен, Фредерик"
-    },
-    "шuman": {
-        "era": "romantic",
-        "birth": 1810,
-        "death": 1856,
-        "full_name": "Роберт Шуман",
-        "bio": "Немецкий композитор, пианист, музыкальный критик. Его фортепианные циклы «Бабочки», «Карнавал» — шедевры романтизма.",
-        "wiki": "https://ru.wikipedia.org/wiki/Шуман,_Роберт",
-        "wiki_title": "Шуман, Роберт"
-    },
-    "лист": {
-        "era": "romantic",
-        "birth": 1811,
-        "death": 1886,
-        "full_name": "Ференц Лист",
-        "bio": "Венгерский композитор, пианист-виртуоз, дирижёр. Крупнейший представитель музыкального романтизма, создатель жанра симфонической поэмы.",
-        "wiki": "https://ru.wikipedia.org/wiki/Лист,_Ференц",
-        "wiki_title": "Лист, Ференц"
-    },
-    "вагнер": {
-        "era": "romantic",
-        "birth": 1813,
-        "death": 1883,
-        "full_name": "Рихард Вагнер",
-        "bio": "Немецкий композитор, дирижёр, теоретик искусства. Реформатор оперного жанра, создатель концепции «музыкальной драмы».",
-        "wiki": "https://ru.wikipedia.org/wiki/Вагнер,_Рихард",
-        "wiki_title": "Вагнер, Рихард"
-    },
-    "верди": {
-        "era": "romantic",
-        "birth": 1813,
-        "death": 1901,
-        "full_name": "Джузеппе Верди",
-        "bio": "Великий итальянский композитор, вершина оперного жанра. Автор «Травиаты», «Аиды», «Риголетто».",
-        "wiki": "https://ru.wikipedia.org/wiki/Верди,_Джузеппе",
-        "wiki_title": "Верди, Джузеппе"
-    },
     "шуберт": {
         "era": "romantic",
         "birth": 1797,
         "death": 1828,
         "full_name": "Франц Петер Шуберт",
-        "bio": "Австрийский композитор, основоположник романтизма в музыке. Создатель вокального цикла «Прекрасная мельничиха». Автор более 600 песен.",
+        "bio": "Австрийский композитор, основоположник романтизма в музыке.",
         "wiki": "https://ru.wikipedia.org/wiki/Шуберт,_Франц",
-        "wiki_title": "Шуберт, Франц"
+        "wiki_title": "Шуберт, Франц",
+        "image": "https://upload.wikimedia.org/wikipedia/commons/thumb/5/57/Schubert.jpg/400px-Schubert.jpg"
     },
     "глинка": {
         "era": "romantic",
         "birth": 1804,
         "death": 1857,
         "full_name": "Михаил Иванович Глинка",
-        "bio": "Великий русский композитор, основоположник русской классической музыки. Его оперы «Жизнь за царя» и «Руслан и Людмила» — начало русской оперной традиции.",
+        "bio": "Великий русский композитор, основоположник русской классической музыки.",
         "wiki": "https://ru.wikipedia.org/wiki/Глинка,_Михаил_Иванович",
-        "wiki_title": "Глинка, Михаил Иванович"
+        "wiki_title": "Глинка, Михаил Иванович",
+        "image": "https://upload.wikimedia.org/wikipedia/commons/thumb/a/a7/Mikhail_Glinka.jpg/400px-Mikhail_Glinka.jpg"
+    },
+    "шопен": {
+        "era": "romantic",
+        "birth": 1810,
+        "death": 1849,
+        "full_name": "Фредерик Шопен",
+        "bio": "Великий польский композитор, пианист-виртуоз. Поэзия фортепиано.",
+        "wiki": "https://ru.wikipedia.org/wiki/Шопен,_Фредерик",
+        "wiki_title": "Шопен, Фредерик",
+        "image": "https://upload.wikimedia.org/wikipedia/commons/thumb/7/7c/Frederic_Chopin.jpg/400px-Frederic_Chopin.jpg"
+    },
+    "шuman": {
+        "era": "romantic",
+        "birth": 1810,
+        "death": 1856,
+        "full_name": "Роберт Шуман",
+        "bio": "Немецкий композитор, пианист, музыкальный критик.",
+        "wiki": "https://ru.wikipedia.org/wiki/Шуман,_Роберт",
+        "wiki_title": "Шуман, Роберт",
+        "image": "https://upload.wikimedia.org/wikipedia/commons/thumb/4/49/Robert_Schumann.jpg/400px-Robert_Schumann.jpg"
+    },
+    "лист": {
+        "era": "romantic",
+        "birth": 1811,
+        "death": 1886,
+        "full_name": "Ференц Лист",
+        "bio": "Венгерский композитор, пианист-виртуоз. Создатель жанра симфонической поэмы.",
+        "wiki": "https://ru.wikipedia.org/wiki/Лист,_Ференц",
+        "wiki_title": "Лист, Ференц",
+        "image": "https://upload.wikimedia.org/wikipedia/commons/thumb/3/34/Liszt.jpg/400px-Liszt.jpg"
+    },
+    "вагнер": {
+        "era": "romantic",
+        "birth": 1813,
+        "death": 1883,
+        "full_name": "Рихард Вагнер",
+        "bio": "Немецкий композитор, реформатор оперного жанра.",
+        "wiki": "https://ru.wikipedia.org/wiki/Вагнер,_Рихард",
+        "wiki_title": "Вагнер, Рихард",
+        "image": "https://upload.wikimedia.org/wikipedia/commons/thumb/2/2c/Richard_Wagner.jpg/400px-Richard_Wagner.jpg"
+    },
+    "верди": {
+        "era": "romantic",
+        "birth": 1813,
+        "death": 1901,
+        "full_name": "Джузеппе Верди",
+        "bio": "Великий итальянский композитор, вершина оперного жанра.",
+        "wiki": "https://ru.wikipedia.org/wiki/Верди,_Джузеппе",
+        "wiki_title": "Верди, Джузеппе",
+        "image": "https://upload.wikimedia.org/wikipedia/commons/thumb/1/1e/Giuseppe_Verdi.jpg/400px-Giuseppe_Verdi.jpg"
+    },
+    "берлиоз": {
+        "era": "romantic",
+        "birth": 1803,
+        "death": 1869,
+        "full_name": "Гектор Берлиоз",
+        "bio": "Французский композитор, дирижёр. Крупнейший представитель французского романтизма.",
+        "wiki": "https://ru.wikipedia.org/wiki/Берлиоз,_Гектор",
+        "wiki_title": "Берлиоз, Гектор",
+        "image": "https://upload.wikimedia.org/wikipedia/commons/thumb/9/94/Berlioz.jpg/400px-Berlioz.jpg"
+    },
+    "мендельсон": {
+        "era": "romantic",
+        "birth": 1809,
+        "death": 1847,
+        "full_name": "Феликс Мендельсон-Бартольди",
+        "bio": "Немецкий композитор и дирижёр. Возродил музыку Баха.",
+        "wiki": "https://ru.wikipedia.org/wiki/Мендельсон,_Феликс",
+        "wiki_title": "Мендельсон, Феликс",
+        "image": "https://upload.wikimedia.org/wikipedia/commons/thumb/b/b3/Mendelssohn.jpg/400px-Mendelssohn.jpg"
     },
     "брамс": {
         "era": "romantic",
         "birth": 1833,
         "death": 1897,
         "full_name": "Иоганнес Брамс",
-        "bio": "Немецкий композитор, один из главных представителей романтизма. Его симфонии, концерты и камерная музыка — вершина романтического стиля.",
+        "bio": "Немецкий композитор, один из главных представителей романтизма.",
         "wiki": "https://ru.wikipedia.org/wiki/Брамс,_Иоганнес",
-        "wiki_title": "Брамс, Иоганнес"
-    },
-    "бородин": {
-        "era": "romantic",
-        "birth": 1833,
-        "death": 1887,
-        "full_name": "Александр Порфирьевич Бородин",
-        "bio": "Русский композитор и учёный-химик. Его опера «Князь Игорь» — шедевр русской эпической оперы.",
-        "wiki": "https://ru.wikipedia.org/wiki/Бородин,_Александр_Порфирьевич",
-        "wiki_title": "Бородин, Александр Порфирьевич"
+        "wiki_title": "Брамс, Иоганнес",
+        "image": "https://upload.wikimedia.org/wikipedia/commons/thumb/6/6d/Brahms.jpg/400px-Brahms.jpg"
     },
     "бизе": {
         "era": "romantic",
         "birth": 1838,
         "death": 1875,
         "full_name": "Жорж Бизе",
-        "bio": "Французский композитор, автор всемирно известной оперы «Кармен».",
+        "bio": "Французский композитор, автор оперы «Кармен».",
         "wiki": "https://ru.wikipedia.org/wiki/Бизе,_Жорж",
-        "wiki_title": "Бизе, Жорж"
+        "wiki_title": "Бизе, Жорж",
+        "image": "https://upload.wikimedia.org/wikipedia/commons/thumb/1/1f/Georges_Bizet.jpg/400px-Georges_Bizet.jpg"
     },
     "муссоргский": {
         "era": "romantic",
         "birth": 1839,
         "death": 1881,
         "full_name": "Модест Петрович Мусоргский",
-        "bio": "Русский композитор, член «Могучей кучки». Его оперы «Борис Годунов» и «Хованщина» — вершины русской оперной классики.",
+        "bio": "Русский композитор, член «Могучей кучки».",
         "wiki": "https://ru.wikipedia.org/wiki/Мусоргский,_Модест_Петрович",
-        "wiki_title": "Мусоргский, Модест Петрович"
+        "wiki_title": "Мусоргский, Модест Петрович",
+        "image": "https://upload.wikimedia.org/wikipedia/commons/thumb/4/49/Musorgsky.jpg/400px-Musorgsky.jpg"
     },
     "чайковский": {
         "era": "romantic",
         "birth": 1840,
         "death": 1893,
         "full_name": "Пётр Ильич Чайковский",
-        "bio": "Великий русский композитор, педагог, дирижёр. Его балеты «Лебединое озеро», «Щелкунчик», «Спящая красавица» — мировая классика.",
+        "bio": "Великий русский композитор. Балеты «Лебединое озеро», «Щелкунчик».",
         "wiki": "https://ru.wikipedia.org/wiki/Чайковский,_Пётр_Ильич",
-        "wiki_title": "Чайковский, Пётр Ильич"
+        "wiki_title": "Чайковский, Пётр Ильич",
+        "image": "https://upload.wikimedia.org/wikipedia/commons/thumb/6/63/Tchaikovsky.jpg/400px-Tchaikovsky.jpg"
     },
     "дворжак": {
         "era": "romantic",
         "birth": 1841,
         "death": 1904,
         "full_name": "Антонин Леопольд Дворжак",
-        "bio": "Чешский композитор, один из крупнейших представителей европейского романтизма. Его «Славянские танцы» известны во всём мире.",
+        "bio": "Чешский композитор, один из крупнейших представителей романтизма.",
         "wiki": "https://ru.wikipedia.org/wiki/Дворжак,_Антонин",
-        "wiki_title": "Дворжак, Антонин"
+        "wiki_title": "Дворжак, Антонин",
+        "image": "https://upload.wikimedia.org/wikipedia/commons/thumb/a/a9/Dvorak.jpg/400px-Dvorak.jpg"
     },
     "григ": {
         "era": "romantic",
         "birth": 1843,
         "death": 1907,
         "full_name": "Эдвард Хагеруп Григ",
-        "bio": "Норвежский композитор, пианист и дирижёр. Его музыка для драмы Ибсена «Пер Гюнт» стала символом норвежской музыки.",
+        "bio": "Норвежский композитор. Музыка к драме «Пер Гюнт».",
         "wiki": "https://ru.wikipedia.org/wiki/Григ,_Эдвард",
-        "wiki_title": "Григ, Эдвард"
+        "wiki_title": "Григ, Эдвард",
+        "image": "https://upload.wikimedia.org/wikipedia/commons/thumb/5/5c/Edvard_Grieg.jpg/400px-Edvard_Grieg.jpg"
     },
     "римский-корсаков": {
         "era": "romantic",
         "birth": 1844,
         "death": 1908,
         "full_name": "Николай Андреевич Римский-Корсаков",
-        "bio": "Русский композитор, педагог, дирижёр. Мастер оркестровой палитры. Автор опер «Садко», «Снегурочка», «Золотой петушок».",
+        "bio": "Русский композитор, педагог, дирижёр. Мастер оркестровой палитры.",
         "wiki": "https://ru.wikipedia.org/wiki/Римский-Корсаков,_Николай_Андреевич",
-        "wiki_title": "Римский-Корсаков, Николай Андреевич"
+        "wiki_title": "Римский-Корсаков, Николай Андреевич",
+        "image": "https://upload.wikimedia.org/wikipedia/commons/thumb/3/35/Rimsky-Korsakov.jpg/400px-Rimsky-Korsakov.jpg"
+    },
+    "бородин": {
+        "era": "romantic",
+        "birth": 1833,
+        "death": 1887,
+        "full_name": "Александр Порфирьевич Бородин",
+        "bio": "Русский композитор и учёный-химик. Опера «Князь Игорь».",
+        "wiki": "https://ru.wikipedia.org/wiki/Бородин,_Александр_Порфирьевич",
+        "wiki_title": "Бородин, Александр Порфирьевич",
+        "image": "https://upload.wikimedia.org/wikipedia/commons/thumb/3/32/Alexander_Borodin.jpg/400px-Alexander_Borodin.jpg"
     },
     "малер": {
         "era": "romantic",
         "birth": 1860,
         "death": 1911,
         "full_name": "Густав Малер",
-        "bio": "Австрийский композитор и дирижёр, один из крупнейших представителей позднего романтизма. Его 9 симфоний — вершины симфонического жанра.",
+        "bio": "Австрийский композитор, один из крупнейших представителей позднего романтизма.",
         "wiki": "https://ru.wikipedia.org/wiki/Малер,_Густав",
-        "wiki_title": "Малер, Густав"
-    },
-    "штраус": {
-        "era": "romantic",
-        "birth": 1864,
-        "death": 1949,
-        "full_name": "Рихард Штраус",
-        "bio": "Немецкий композитор и дирижёр позднего романтизма. Его симфонические поэмы «Так говорил Заратустра» — вершина программного симфонизма.",
-        "wiki": "https://ru.wikipedia.org/wiki/Штраус,_Рихард",
-        "wiki_title": "Штраус, Рихард"
+        "wiki_title": "Малер, Густав",
+        "image": "https://upload.wikimedia.org/wikipedia/commons/thumb/2/27/Gustav_Mahler.jpg/400px-Gustav_Mahler.jpg"
     },
     "рахманинов": {
         "era": "romantic",
         "birth": 1873,
         "death": 1943,
         "full_name": "Сергей Васильевич Рахманинов",
-        "bio": "Великий русский композитор, пианист и дирижёр. Его Второй и Третий фортепианные концерты — одни из самых исполняемых в мире.",
+        "bio": "Великий русский композитор, пианист и дирижёр.",
         "wiki": "https://ru.wikipedia.org/wiki/Рахманинов,_Сергей_Васильевич",
-        "wiki_title": "Рахманинов, Сергей Васильевич"
+        "wiki_title": "Рахманинов, Сергей Васильевич",
+        "image": "https://upload.wikimedia.org/wikipedia/commons/thumb/b/bd/Rachmaninoff.jpg/400px-Rachmaninoff.jpg"
     },
     "скрябин": {
         "era": "romantic",
         "birth": 1872,
         "death": 1915,
         "full_name": "Александр Николаевич Скрябин",
-        "bio": "Русский композитор и пианист. Его музыка — уникальный синтез романтизма и символизма, автор «Поэмы экстаза» и «Прометея».",
+        "bio": "Русский композитор и пианист. Уникальный синтез романтизма и символизма.",
         "wiki": "https://ru.wikipedia.org/wiki/Скрябин,_Александр_Николаевич",
-        "wiki_title": "Скрябин, Александр Николаевич"
+        "wiki_title": "Скрябин, Александр Николаевич",
+        "image": "https://upload.wikimedia.org/wikipedia/commons/thumb/7/72/Scriabin.jpg/400px-Scriabin.jpg"
     },
     "сибелиус": {
         "era": "romantic",
         "birth": 1865,
         "death": 1957,
         "full_name": "Ян Сибелиус",
-        "bio": "Финский композитор. Его симфоническая поэма «Финляндия» и скрипичный концерт — символы финской национальной музыки.",
+        "bio": "Финский композитор. Символ финской национальной музыки.",
         "wiki": "https://ru.wikipedia.org/wiki/Сибелиус,_Ян",
-        "wiki_title": "Сибелиус, Ян"
-    },
-    "элгар": {
-        "era": "romantic",
-        "birth": 1857,
-        "death": 1934,
-        "full_name": "Эдвард Элгар",
-        "bio": "Английский композитор. Его «Энигма-вариации» и марш «Торжественные и церемониальные марши» — вершины английского романтизма.",
-        "wiki": "https://ru.wikipedia.org/wiki/Элгар,_Эдвард",
-        "wiki_title": "Элгар, Эдвард"
+        "wiki_title": "Сибелиус, Ян",
+        "image": "https://upload.wikimedia.org/wikipedia/commons/thumb/a/a9/Sibelius.jpg/400px-Sibelius.jpg"
     },
     "пучини": {
         "era": "romantic",
         "birth": 1858,
         "death": 1924,
         "full_name": "Джакомо Пуччини",
-        "bio": "Итальянский оперный композитор. Его оперы «Богема», «Тоска», «Мадам Баттерфляй» — шедевры веризма.",
+        "bio": "Итальянский оперный композитор. «Богема», «Тоска», «Мадам Баттерфляй».",
         "wiki": "https://ru.wikipedia.org/wiki/Пуччини,_Джакомо",
-        "wiki_title": "Пуччини, Джакомо"
+        "wiki_title": "Пуччини, Джакомо",
+        "image": "https://upload.wikimedia.org/wikipedia/commons/thumb/8/8d/Giacomo_Puccini.jpg/400px-Giacomo_Puccini.jpg"
+    },
+    "штраус": {
+        "era": "romantic",
+        "birth": 1864,
+        "death": 1949,
+        "full_name": "Рихард Штраус",
+        "bio": "Немецкий композитор и дирижёр позднего романтизма.",
+        "wiki": "https://ru.wikipedia.org/wiki/Штраус,_Рихард",
+        "wiki_title": "Штраус, Рихард",
+        "image": "https://upload.wikimedia.org/wikipedia/commons/thumb/8/8c/Richard_Strauss.jpg/400px-Richard_Strauss.jpg"
     },
     
     # ============================================================
@@ -604,171 +569,110 @@ COMPOSERS_DB = {
         "birth": 1862,
         "death": 1918,
         "full_name": "Клод Ашиль Дебюсси",
-        "bio": "Французский композитор, основоположник музыкального импрессионизма. Его прелюдии, «Лунный свет» и опера «Пеллеас и Мелизанда» изменили музыкальный язык XX века.",
+        "bio": "Французский композитор, основоположник музыкального импрессионизма.",
         "wiki": "https://ru.wikipedia.org/wiki/Дебюсси,_Клод",
-        "wiki_title": "Дебюсси, Клод"
+        "wiki_title": "Дебюсси, Клод",
+        "image": "https://upload.wikimedia.org/wikipedia/commons/thumb/5/5b/Debussy.jpg/400px-Debussy.jpg"
     },
     "сати": {
         "era": "modern",
         "birth": 1866,
         "death": 1925,
         "full_name": "Эрик Альфред Лесли Сати",
-        "bio": "Французский композитор, пианист. Предшественник музыкального минимализма. Его «Гимнопедии» и «Гносьенны» — уникальный звуковой мир.",
+        "bio": "Французский композитор, предшественник музыкального минимализма.",
         "wiki": "https://ru.wikipedia.org/wiki/Сати,_Эрик",
-        "wiki_title": "Сати, Эрик"
+        "wiki_title": "Сати, Эрик",
+        "image": "https://upload.wikimedia.org/wikipedia/commons/thumb/8/8f/Satie.jpg/400px-Satie.jpg"
     },
     "равель": {
         "era": "modern",
         "birth": 1875,
         "death": 1937,
         "full_name": "Морис Равель",
-        "bio": "Французский композитор-импрессионист. Его «Болеро» — одно из самых популярных произведений классической музыки.",
+        "bio": "Французский композитор-импрессионист. Его «Болеро» — мировое признание.",
         "wiki": "https://ru.wikipedia.org/wiki/Равель,_Морис",
-        "wiki_title": "Равель, Морис"
+        "wiki_title": "Равель, Морис",
+        "image": "https://upload.wikimedia.org/wikipedia/commons/thumb/0/0a/Ravel.jpg/400px-Ravel.jpg"
     },
     "фаля": {
         "era": "modern",
         "birth": 1876,
         "death": 1946,
         "full_name": "Мануэль де Фалья",
-        "bio": "Испанский композитор. Его балет «Любовь-волшебница» и «Ночи в садах Испании» — вершины испанского музыкального модерна.",
+        "bio": "Испанский композитор, вершина испанского музыкального модерна.",
         "wiki": "https://ru.wikipedia.org/wiki/Фалья,_Мануэль_де",
-        "wiki_title": "Фалья, Мануэль де"
+        "wiki_title": "Фалья, Мануэль де",
+        "image": "https://upload.wikimedia.org/wikipedia/commons/thumb/d/d6/Falla.jpg/400px-Falla.jpg"
     },
     "респиги": {
         "era": "modern",
         "birth": 1879,
         "death": 1936,
         "full_name": "Отторино Респиги",
-        "bio": "Итальянский композитор. Его симфонические поэмы «Римские сосны», «Римские фонтаны» — образцы музыкального импрессионизма.",
+        "bio": "Итальянский композитор, автор симфонических поэм о Риме.",
         "wiki": "https://ru.wikipedia.org/wiki/Респиги,_Отторино",
-        "wiki_title": "Респиги, Отторино"
+        "wiki_title": "Респиги, Отторино",
+        "image": "https://upload.wikimedia.org/wikipedia/commons/thumb/4/47/Respighi.jpg/400px-Respighi.jpg"
     },
     "барток": {
         "era": "modern",
         "birth": 1881,
         "death": 1945,
         "full_name": "Бела Барток",
-        "bio": "Венгерский композитор, пианист и этномузыколог. Создатель уникального музыкального языка, основанного на народной музыке Восточной Европы.",
+        "bio": "Венгерский композитор, пианист и этномузыколог.",
         "wiki": "https://ru.wikipedia.org/wiki/Барток,_Бела",
-        "wiki_title": "Барток, Бела"
+        "wiki_title": "Барток, Бела",
+        "image": "https://upload.wikimedia.org/wikipedia/commons/thumb/0/08/Bartok.jpg/400px-Bartok.jpg"
     },
     "стравинский": {
         "era": "modern",
         "birth": 1882,
         "death": 1971,
         "full_name": "Игорь Фёдорович Стравинский",
-        "bio": "Великий русский композитор, один из главных новаторов XX века. Его балеты «Весна священная», «Жар-птица» и «Петрушка» перевернули музыкальный мир.",
+        "bio": "Великий русский композитор, один из главных новаторов XX века.",
         "wiki": "https://ru.wikipedia.org/wiki/Стравинский,_Игорь_Фёдорович",
-        "wiki_title": "Стравинский, Игорь Фёдорович"
-    },
-    "веберн": {
-        "era": "modern",
-        "birth": 1883,
-        "death": 1945,
-        "full_name": "Антон Веберн",
-        "bio": "Австрийский композитор, представитель новой венской школы. Его точечная музыка оказала огромное влияние на европейский авангард.",
-        "wiki": "https://ru.wikipedia.org/wiki/Веберн,_Антон",
-        "wiki_title": "Веберн, Антон"
-    },
-    "берг": {
-        "era": "modern",
-        "birth": 1885,
-        "death": 1935,
-        "full_name": "Альбан Берг",
-        "bio": "Австрийский композитор, представитель новой венской школы. Его оперы «Воццек» и «Лулу» — вершины экспрессионизма.",
-        "wiki": "https://ru.wikipedia.org/wiki/Берг,_Альбан",
-        "wiki_title": "Берг, Альбан"
+        "wiki_title": "Стравинский, Игорь Фёдорович",
+        "image": "https://upload.wikimedia.org/wikipedia/commons/thumb/6/6e/Stravinsky.jpg/400px-Stravinsky.jpg"
     },
     "прокофьев": {
         "era": "modern",
         "birth": 1891,
         "death": 1953,
         "full_name": "Сергей Сергеевич Прокофьев",
-        "bio": "Великий русский композитор, пианист, дирижёр. Его «Ромео и Джульетта», «Петя и волк», «Монтекки и Капулетти» — классика XX века.",
+        "bio": "Великий русский композитор. «Ромео и Джульетта», «Петя и волк».",
         "wiki": "https://ru.wikipedia.org/wiki/Прокофьев,_Сергей_Сергеевич",
-        "wiki_title": "Прокофьев, Сергей Сергеевич"
-    },
-    "онигер": {
-        "era": "modern",
-        "birth": 1892,
-        "death": 1955,
-        "full_name": "Артюр Онеггер",
-        "bio": "Французский композитор швейцарского происхождения. Его симфоническая поэма «Пасифик 231» — музыкальный портрет паровоза.",
-        "wiki": "https://ru.wikipedia.org/wiki/Онеггер,_Артюр",
-        "wiki_title": "Онеггер, Артюр"
-    },
-    "мийо": {
-        "era": "modern",
-        "birth": 1892,
-        "death": 1974,
-        "full_name": "Дариус Мийо",
-        "bio": "Французский композитор, член «Шестёрки». Экспериментатор, автор более 400 произведений в разных жанрах.",
-        "wiki": "https://ru.wikipedia.org/wiki/Мийо,_Дариус",
-        "wiki_title": "Мийо, Дариус"
+        "wiki_title": "Прокофьев, Сергей Сергеевич",
+        "image": "https://upload.wikimedia.org/wikipedia/commons/thumb/2/2e/Prokofiev.jpg/400px-Prokofiev.jpg"
     },
     "копленд": {
         "era": "modern",
         "birth": 1900,
         "death": 1990,
         "full_name": "Аарон Копленд",
-        "bio": "Американский композитор, создатель «американского звучания». Его балеты «Аппалачская весна» стали символами американской музыки.",
+        "bio": "Американский композитор, создатель «американского звучания».",
         "wiki": "https://ru.wikipedia.org/wiki/Копленд,_Аарон",
-        "wiki_title": "Копленд, Аарон"
+        "wiki_title": "Копленд, Аарон",
+        "image": "https://upload.wikimedia.org/wikipedia/commons/thumb/a/a5/Copland.jpg/400px-Copland.jpg"
     },
     "хачатурян": {
         "era": "modern",
         "birth": 1903,
         "death": 1978,
         "full_name": "Арам Ильич Хачатурян",
-        "bio": "Армянский советский композитор, дирижёр. Его «Танец с саблями» из балета «Гаяне» стал одним из самых узнаваемых произведений советской музыки.",
+        "bio": "Армянский советский композитор. «Танец с саблями».",
         "wiki": "https://ru.wikipedia.org/wiki/Хачатурян,_Арам_Ильич",
-        "wiki_title": "Хачатурян, Арам Ильич"
-    },
-    "кабалевский": {
-        "era": "modern",
-        "birth": 1904,
-        "death": 1987,
-        "full_name": "Дмитрий Борисович Кабалевский",
-        "bio": "Русский советский композитор, пианист, педагог. Его музыка для детей («Клоуны») и концерты для фортепиано известны во всём мире.",
-        "wiki": "https://ru.wikipedia.org/wiki/Кабалевский,_Дмитрий_Борисович",
-        "wiki_title": "Кабалевский, Дмитрий Борисович"
+        "wiki_title": "Хачатурян, Арам Ильич",
+        "image": "https://upload.wikimedia.org/wikipedia/commons/thumb/5/56/Khachaturian.jpg/400px-Khachaturian.jpg"
     },
     "шостакович": {
         "era": "modern",
         "birth": 1906,
         "death": 1975,
         "full_name": "Дмитрий Дмитриевич Шостакович",
-        "bio": "Великий русский композитор, пианист и педагог. Его 15 симфоний, 15 струнных квартетов — музыкальная летопись XX века.",
+        "bio": "Великий русский композитор. 15 симфоний — музыкальная летопись XX века.",
         "wiki": "https://ru.wikipedia.org/wiki/Шостакович,_Дмитрий_Дмитриевич",
-        "wiki_title": "Шостакович, Дмитрий Дмитриевич"
-    },
-    "бриттен": {
-        "era": "modern",
-        "birth": 1913,
-        "death": 1976,
-        "full_name": "Бенджамин Бриттен",
-        "bio": "Английский композитор, дирижёр и пианист. Его опера «Питер Граймс» и «Военный реквием» — вершины английской музыки XX века.",
-        "wiki": "https://ru.wikipedia.org/wiki/Бриттен,_Бенджамин",
-        "wiki_title": "Бриттен, Бенджамин"
-    },
-    "глиэр": {
-        "era": "modern",
-        "birth": 1875,
-        "death": 1956,
-        "full_name": "Рейнгольд Морицевич Глиэр",
-        "bio": "Русский советский композитор, дирижёр, педагог. Его балет «Красный мак» и концерт для арфы — классика советской музыки.",
-        "wiki": "https://ru.wikipedia.org/wiki/Глиэр,_Рейнгольд_Морицевич",
-        "wiki_title": "Глиэр, Рейнгольд Морицевич"
-    },
-    "миасковский": {
-        "era": "modern",
-        "birth": 1881,
-        "death": 1950,
-        "full_name": "Николай Яковлевич Мясковский",
-        "bio": "Русский советский композитор. Его 27 симфоний — уникальное явление в истории музыки, «отец советской симфонии».",
-        "wiki": "https://ru.wikipedia.org/wiki/Мясковский,_Николай_Яковлевич",
-        "wiki_title": "Мясковский, Николай Яковлевич"
+        "wiki_title": "Шостакович, Дмитрий Дмитриевич",
+        "image": "https://upload.wikimedia.org/wikipedia/commons/thumb/4/4c/Shostakovich.jpg/400px-Shostakovich.jpg"
     },
     
     # ============================================================
@@ -778,149 +682,53 @@ COMPOSERS_DB = {
         "era": "contemporary",
         "birth": 1908,
         "death": 1992,
-        "full_name": "Оливье Эжен Проспер Шарль Мессиан",
-        "bio": "Французский композитор, органист, орнитолог. Его музыка — синтез религиозного мистицизма и звуков природы. Грандиозное сочинение «Турангалила».",
+        "full_name": "Оливье Мессиан",
+        "bio": "Французский композитор, органист, орнитолог.",
         "wiki": "https://ru.wikipedia.org/wiki/Мессиан,_Оливье",
-        "wiki_title": "Мессиан, Оливье"
+        "wiki_title": "Мессиан, Оливье",
+        "image": "https://upload.wikimedia.org/wikipedia/commons/thumb/4/4a/Messiaen.jpg/400px-Messiaen.jpg"
     },
     "кейдж": {
         "era": "contemporary",
         "birth": 1912,
         "death": 1992,
-        "full_name": "Джон Милтон Кейдж-младший",
-        "bio": "Американский композитор, философ музыки. Его знаменитая пьеса «4'33\"» — манифест концептуального искусства и тишины как музыки.",
+        "full_name": "Джон Милтон Кейдж",
+        "bio": "Американский композитор, философ музыки. Пьеса «4'33\"».",
         "wiki": "https://ru.wikipedia.org/wiki/Кейдж,_Джон",
-        "wiki_title": "Кейдж, Джон"
-    },
-    "лигети": {
-        "era": "contemporary",
-        "birth": 1923,
-        "death": 2006,
-        "full_name": "Дьёрдь Шандор Лигети",
-        "bio": "Венгерский и австрийский композитор. Его музыка использована в фильме Стэнли Кубрика «Космическая одиссея 2001 года».",
-        "wiki": "https://ru.wikipedia.org/wiki/Лигети,_Дьёрдь",
-        "wiki_title": "Лигети, Дьёрдь"
-    },
-    "бере": {
-        "era": "contemporary",
-        "birth": 1925,
-        "death": 2003,
-        "full_name": "Лучано Берио",
-        "bio": "Итальянский композитор, представитель авангарда. Его «Последовательности» для соло-инструментов — важнейший вклад в музыку XX века.",
-        "wiki": "https://ru.wikipedia.org/wiki/Берио,_Лучано",
-        "wiki_title": "Берио, Лучано"
-    },
-    "булез": {
-        "era": "contemporary",
-        "birth": 1925,
-        "death": 2016,
-        "full_name": "Пьер Булез",
-        "bio": "Французский композитор и дирижёр, лидер европейского авангарда. Его серийная и электронная музыка изменила современное искусство.",
-        "wiki": "https://ru.wikipedia.org/wiki/Булез,_Пьер",
-        "wiki_title": "Булез, Пьер"
-    },
-    "штокхаузен": {
-        "era": "contemporary",
-        "birth": 1928,
-        "death": 2007,
-        "full_name": "Карлхайнц Штокхаузен",
-        "bio": "Немецкий композитор, один из главных новаторов в электронной и пространственной музыке.",
-        "wiki": "https://ru.wikipedia.org/wiki/Штокхаузен,_Карлхайнц",
-        "wiki_title": "Штокхаузен, Карлхайнц"
-    },
-    "горецкий": {
-        "era": "contemporary",
-        "birth": 1933,
-        "death": 2010,
-        "full_name": "Хенрик Густав Горецкий",
-        "bio": "Польский композитор. Его Симфония №3 «Симфония скорбных песен» стала мировым хитом в 1990-е годы.",
-        "wiki": "https://ru.wikipedia.org/wiki/Горецкий,_Хенрик_Миколай",
-        "wiki_title": "Горецкий, Хенрик Миколай"
+        "wiki_title": "Кейдж, Джон",
+        "image": "https://upload.wikimedia.org/wikipedia/commons/thumb/5/57/Cage.jpg/400px-Cage.jpg"
     },
     "шнитке": {
         "era": "contemporary",
         "birth": 1934,
         "death": 1998,
         "full_name": "Альфред Гарриевич Шнитке",
-        "bio": "Русский композитор, пианист, музыковед. Создатель стиля «полистилистика». Его произведения сочетают разные эпохи и жанры.",
+        "bio": "Русский композитор, создатель стиля «полистилистика».",
         "wiki": "https://ru.wikipedia.org/wiki/Шнитке,_Альфред_Гарриевич",
-        "wiki_title": "Шнитке, Альфред Гарриевич"
+        "wiki_title": "Шнитке, Альфред Гарриевич",
+        "image": "https://upload.wikimedia.org/wikipedia/commons/thumb/2/2b/Schnittke.jpg/400px-Schnittke.jpg"
     },
     "пярт": {
         "era": "contemporary",
         "birth": 1935,
         "death": None,
         "full_name": "Арво Пярт",
-        "bio": "Эстонский композитор, создатель стиля «колокольного звона» (tintinnabuli). Его музыка — медитация, возвращение к истокам христианской традиции.",
+        "bio": "Эстонский композитор, создатель стиля «колокольного звона».",
         "wiki": "https://ru.wikipedia.org/wiki/Пярт,_Арво",
-        "wiki_title": "Пярт, Арво"
-    },
-    "сильвестров": {
-        "era": "contemporary",
-        "birth": 1937,
-        "death": None,
-        "full_name": "Валентин Васильевич Сильвестров",
-        "bio": "Украинский композитор. Его «Тихая музыка» — уникальный сплав современного языка и романтической традиции.",
-        "wiki": "https://ru.wikipedia.org/wiki/Сильвестров,_Валентин_Васильевич",
-        "wiki_title": "Сильвестров, Валентин Васильевич"
-    },
-    "кейдж": {
-        "era": "contemporary",
-        "birth": 1912,
-        "death": 1992,
-        "full_name": "Джон Милтон Кейдж-младший",
-        "bio": "Американский композитор, философ музыки. Его знаменитая пьеса «4'33\"» — манифест концептуального искусства и тишины как музыки.",
-        "wiki": "https://ru.wikipedia.org/wiki/Кейдж,_Джон",
-        "wiki_title": "Кейдж, Джон"
+        "wiki_title": "Пярт, Арво",
+        "image": "https://upload.wikimedia.org/wikipedia/commons/thumb/5/5c/Arvo_Pärt.jpg/400px-Arvo_Pärt.jpg"
     },
     "эйнауди": {
         "era": "contemporary",
         "birth": 1955,
         "death": None,
         "full_name": "Людовико Эйнауди",
-        "bio": "Итальянский композитор и пианист. Его минималистическая музыка для кино и театра делает его одним из самых исполняемых современных композиторов в мире.",
+        "bio": "Итальянский композитор и пианист. Один из самых исполняемых современных композиторов.",
         "wiki": "https://ru.wikipedia.org/wiki/Эйнауди,_Людовико",
-        "wiki_title": "Эйнауди, Людовико"
-    },
-    "рихтер": {
-        "era": "contemporary",
-        "birth": 1969,
-        "death": None,
-        "full_name": "Макс Рихтер",
-        "bio": "Британский композитор немецкого происхождения. Его альбомы «Sleep» и «The Blue Notebooks» — вершины современного минимализма.",
-        "wiki": "https://ru.wikipedia.org/wiki/Рихтер,_Макс",
-        "wiki_title": "Рихтер, Макс"
+        "wiki_title": "Эйнауди, Людовико",
+        "image": "https://upload.wikimedia.org/wikipedia/commons/thumb/2/2b/Einaudi.jpg/400px-Einaudi.jpg"
     },
 }
-
-# ===================== ФУНКЦИИ ДЛЯ РАБОТЫ С ФОТОГРАФИЯМИ =====================
-
-async def get_wikipedia_image(wiki_title: str) -> Optional[str]:
-    """
-    Получает URL изображения композитора через Wikipedia API
-    """
-    if not wiki_title:
-        return None
-    
-    encoded_title = urllib.parse.quote(wiki_title)
-    api_url = f"https://ru.wikipedia.org/w/api.php?action=query&prop=pageimages&format=json&pithumbsize=500&titles={encoded_title}"
-    
-    try:
-        async with aiohttp.ClientSession() as session:
-            async with session.get(api_url, timeout=10) as response:
-                if response.status == 200:
-                    data = await response.json()
-                    pages = data.get("query", {}).get("pages", {})
-                    for page_id, page_data in pages.items():
-                        if "thumbnail" in page_data:
-                            return page_data["thumbnail"].get("source")
-                    return None
-                else:
-                    logger.warning(f"Ошибка Wikipedia API: {response.status}")
-                    return None
-    except Exception as e:
-        logger.warning(f"Ошибка при получении изображения: {e}")
-        return None
 
 # ===================== ВСПОМОГАТЕЛЬНЫЕ ФУНКЦИИ =====================
 
@@ -981,7 +789,7 @@ def format_years_life(composer_data: Dict) -> str:
             return f"{birth} – н.в."
     return ""
 
-def format_composer_response(composer_key: str, composer_data: Dict, image_url: str = None) -> Tuple[str, str, Dict[str, str]]:
+def format_composer_response(composer_key: str, composer_data: Dict) -> Tuple[str, str, Dict[str, str]]:
     era_key = composer_data.get("era")
     era_data = ERAS.get(era_key)
     
@@ -989,6 +797,7 @@ def format_composer_response(composer_key: str, composer_data: Dict, image_url: 
     years_life = format_years_life(composer_data)
     bio = composer_data.get("bio", "Информация о композиторе уточняется.")
     wiki_link = composer_data.get("wiki", "#")
+    image_url = composer_data.get("image")
     
     message = f"""<b>{era_data['emoji']} Эпоха:</b> {era_data['name']}
 <b>📅 Период:</b> {era_data['year_start']}–{era_data['year_end']}
@@ -1005,7 +814,7 @@ def format_composer_response(composer_key: str, composer_data: Dict, image_url: 
     
     links = get_music_links(composer_data, full_name)
     
-    return message, wiki_link, links
+    return message, image_url, wiki_link, links
 
 def format_unknown_response(text: str) -> Tuple[str, Dict[str, str]]:
     year = find_year_in_text(text)
@@ -1035,8 +844,6 @@ def format_unknown_response(text: str) -> Tuple[str, Dict[str, str]]:
 • Полное имя композитора
 • Год создания произведения (например, 1824)
 
-Пример: <i>«Бетховен Симфония №9 1824»</i>
-
 <b>🔍 Поиск по вашему запросу:</b> «{text[:50]}»"""
     
     return message, links
@@ -1056,19 +863,18 @@ async def start(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
 • 🖼️ Присылаю фотографию композитора
 • 🔍 Даю ссылки на поиск в Apple Music, Яндекс Музыке и Spotify
 
+<b>В базе более 60 композиторов с фото!</b>
+
 <b>Примеры запросов:</b>
 • <i>«Бах»</i> → Иоганн Себастьян Бах
 • <i>«Рахманинов»</i> → Сергей Васильевич Рахманинов
 • <i>«Глинка»</i> → Михаил Иванович Глинка
-• <i>«Моцарт»</i> → Вольфганг Амадей Моцарт
-
-<b>В базе более 80 композиторов!</b>
 
 <b>Команды:</b>
 /start - Приветствие
 /help - Справка
 /eras - Список эпох
-/composers - Список композиторов в базе"""
+/composers - Список композиторов"""
     
     keyboard = [
         [InlineKeyboardButton("📖 Помощь", callback_data="help")],
@@ -1089,14 +895,15 @@ async def help_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> No
 • <i>«Моцарт»</i> → покажу Вольфганга Амадея Моцарта
 • <i>«Бах»</i> → покажу Иоганна Себастьяна Баха
 • <i>«Глинка»</i> → покажу Михаила Ивановича Глинку
-• <i>«Дебюсси»</i> → найду Клода Дебюсси
 • <i>«1824»</i> → определю эпоху по году
 
 <b>Команды:</b>
 /start - Приветствие
 /help - Эта справка
 /eras - Список всех эпох
-/composers - Все композиторы в базе (более 80!)
+/composers - Все композиторы в базе
+
+<b>В базе более 60 композиторов с фото!</b>
 
 <b>Что вы получите в ответе:</b>
 • 🖼️ Фото композитора
@@ -1128,24 +935,20 @@ async def composers_command(update: Update, context: ContextTypes.DEFAULT_TYPE) 
     sorted_eras = [e for e in ERAS.keys() if e in composers_by_era]
     
     text = "<b>🎼 Все композиторы в базе:</b>\n\n"
-    total = 0
     for era_key in sorted_eras:
         era_data = ERAS.get(era_key)
         if era_data and era_key in composers_by_era:
             names = sorted(composers_by_era[era_key])
-            text += f"{era_data['emoji']} <b>{era_data['name']}</b> ({len(names)})\n"
+            text += f"{era_data['emoji']} <b>{era_data['name']}</b>\n"
             for name in names:
                 text += f"   • {name}\n"
             text += "\n"
-            total += len(names)
-    
-    text = f"<b>🎼 Все композиторы в базе ({total}):</b>\n\n" + text[len("<b>🎼 Все композиторы в базе:</b>\n\n"):]
     
     if len(text) > 4096:
         await update.message.reply_document(
             document=text.encode('utf-8'),
             filename="composers.txt",
-            caption=f"📋 Полный список композиторов ({total})"
+            caption="📋 Полный список композиторов"
         )
     else:
         await update.message.reply_text(text, parse_mode='HTML')
@@ -1159,16 +962,8 @@ async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE) -> 
     if composer_key and composer_data:
         era_key = composer_data.get("era")
         if era_key and ERAS.get(era_key):
-            status_message = await update.message.reply_text("🔄 Ищу информацию о композиторе...")
-            
-            image_url = None
-            wiki_title = composer_data.get("wiki_title")
-            if wiki_title:
-                image_url = await get_wikipedia_image(wiki_title)
-                logger.info(f"Получено фото для {composer_key}: {image_url}")
-            
-            message, wiki_link, links = format_composer_response(
-                composer_key, composer_data, image_url
+            message, image_url, wiki_link, links = format_composer_response(
+                composer_key, composer_data
             )
             
             keyboard = [
@@ -1184,8 +979,6 @@ async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE) -> 
                 ]
             ]
             reply_markup = InlineKeyboardMarkup(keyboard)
-            
-            await status_message.delete()
             
             if image_url:
                 try:
