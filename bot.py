@@ -1,6 +1,6 @@
 """
 TELEGRAM-БОТ ДЛЯ РАСПРЕДЕЛЕНИЯ КЛАССИЧЕСКОЙ МУЗЫКИ ПО ЭПОХАМ
-Версия: Bothost (с улучшенной загрузкой фото)
+Версия: Bothost (с улучшенной загрузкой фото через Wikipedia API)
 """
 
 import os
@@ -10,6 +10,7 @@ import urllib.parse
 from datetime import datetime
 from typing import Dict, Optional, Tuple, List
 import aiohttp
+import io
 
 from telegram import Update, InlineKeyboardButton, InlineKeyboardMarkup
 from telegram.ext import Application, CommandHandler, MessageHandler, filters, ContextTypes, CallbackQueryHandler
@@ -82,7 +83,7 @@ ERAS = {
     }
 }
 
-# ===================== БАЗА КОМПОЗИТОРОВ С ФОТО =====================
+# ===================== БАЗА КОМПОЗИТОРОВ =====================
 
 COMPOSERS_DB = {
     # ============================================================
@@ -95,8 +96,7 @@ COMPOSERS_DB = {
         "full_name": "Гильом де Машо",
         "bio": "Французский поэт и композитор эпохи Средневековья. Ключевая фигура Ars Nova.",
         "wiki": "https://ru.wikipedia.org/wiki/Машо,_Гильом_де",
-        "wiki_title": "Машо, Гильом де",
-        "image": "https://upload.wikimedia.org/wikipedia/commons/thumb/2/2d/Machaut.jpg/400px-Machaut.jpg"
+        "wiki_title": "Машо, Гильом де"
     },
     "ландини": {
         "era": "medieval",
@@ -105,8 +105,7 @@ COMPOSERS_DB = {
         "full_name": "Франческо Ландини",
         "bio": "Итальянский композитор, органист и поэт эпохи Треченто.",
         "wiki": "https://ru.wikipedia.org/wiki/Ландини,_Франческо",
-        "wiki_title": "Ландини, Франческо",
-        "image": "https://upload.wikimedia.org/wikipedia/commons/thumb/0/0b/Landini.jpg/400px-Landini.jpg"
+        "wiki_title": "Ландини, Франческо"
     },
     "таллис": {
         "era": "medieval",
@@ -115,8 +114,7 @@ COMPOSERS_DB = {
         "full_name": "Томас Таллис",
         "bio": "Английский композитор эпохи Ренессанса. Гениальный полифонист.",
         "wiki": "https://ru.wikipedia.org/wiki/Таллис,_Томас",
-        "wiki_title": "Таллис, Томас",
-        "image": "https://upload.wikimedia.org/wikipedia/commons/thumb/3/3f/Thomas_Tallis.jpg/400px-Thomas_Tallis.jpg"
+        "wiki_title": "Таллис, Томас"
     },
     "палестрина": {
         "era": "medieval",
@@ -125,8 +123,7 @@ COMPOSERS_DB = {
         "full_name": "Джованни Пьерлуиджи да Палестрина",
         "bio": "Итальянский композитор эпохи Ренессанса. Эталон церковной полифонии.",
         "wiki": "https://ru.wikipedia.org/wiki/Палестрина,_Джованни_Пьерлуиджи_да",
-        "wiki_title": "Палестрина, Джованни Пьерлуиджи да",
-        "image": "https://upload.wikimedia.org/wikipedia/commons/thumb/5/54/Palestrina.jpg/400px-Palestrina.jpg"
+        "wiki_title": "Палестрина, Джованни Пьерлуиджи да"
     },
     
     # ============================================================
@@ -139,8 +136,7 @@ COMPOSERS_DB = {
         "full_name": "Антонио Лучо Вивальди",
         "bio": "Итальянский композитор, скрипач-виртуоз. Автор более 500 концертов.",
         "wiki": "https://ru.wikipedia.org/wiki/Вивальди,_Антонио",
-        "wiki_title": "Вивальди, Антонио",
-        "image": "https://upload.wikimedia.org/wikipedia/commons/thumb/5/5d/Antonio_Vivaldi.jpg/400px-Antonio_Vivaldi.jpg"
+        "wiki_title": "Вивальди, Антонио"
     },
     "бах": {
         "era": "baroque",
@@ -149,8 +145,7 @@ COMPOSERS_DB = {
         "full_name": "Иоганн Себастьян Бах",
         "bio": "Великий немецкий композитор, вершина полифонии и барочной музыки.",
         "wiki": "https://ru.wikipedia.org/wiki/Бах,_Иоганн_Себастьян",
-        "wiki_title": "Бах, Иоганн Себастьян",
-        "image": "https://upload.wikimedia.org/wikipedia/commons/thumb/6/6a/Johann_Sebastian_Bach.jpg/400px-Johann_Sebastian_Bach.jpg"
+        "wiki_title": "Бах, Иоганн Себастьян"
     },
     "гендель": {
         "era": "baroque",
@@ -159,18 +154,16 @@ COMPOSERS_DB = {
         "full_name": "Георг Фридрих Гендель",
         "bio": "Немецкий и английский композитор эпохи барокко. Мастер ораторий.",
         "wiki": "https://ru.wikipedia.org/wiki/Гендель,_Георг_Фридрих",
-        "wiki_title": "Гендель, Георг Фридрих",
-        "image": "https://upload.wikimedia.org/wikipedia/commons/thumb/7/78/Georg_Friedrich_Händel.jpg/400px-Georg_Friedrich_Händel.jpg"
+        "wiki_title": "Гендель, Георг Фридрих"
     },
-    "монтеверди": {
+    "монтеверdi": {
         "era": "baroque",
         "birth": 1567,
         "death": 1643,
         "full_name": "Клаудио Монтеверди",
         "bio": "Итальянский композитор, основоположник оперного жанра.",
         "wiki": "https://ru.wikipedia.org/wiki/Монтеверди,_Клаудио",
-        "wiki_title": "Монтеверди, Клаудио",
-        "image": "https://upload.wikimedia.org/wikipedia/commons/thumb/1/1f/Monteverdi.jpg/400px-Monteverdi.jpg"
+        "wiki_title": "Монтеверди, Клаудио"
     },
     "корелли": {
         "era": "baroque",
@@ -179,8 +172,7 @@ COMPOSERS_DB = {
         "full_name": "Арканджело Корелли",
         "bio": "Итальянский скрипач и композитор, основоположник римской скрипичной школы.",
         "wiki": "https://ru.wikipedia.org/wiki/Корелли,_Арканджело",
-        "wiki_title": "Корелли, Арканджело",
-        "image": "https://upload.wikimedia.org/wikipedia/commons/thumb/7/78/Arcangelo_Corelli.jpg/400px-Arcangelo_Corelli.jpg"
+        "wiki_title": "Корелли, Арканджело"
     },
     "пёрселл": {
         "era": "baroque",
@@ -189,8 +181,7 @@ COMPOSERS_DB = {
         "full_name": "Генри Пёрселл",
         "bio": "Английский композитор, крупнейший представитель английской барочной музыки.",
         "wiki": "https://ru.wikipedia.org/wiki/Пёрселл,_Генри",
-        "wiki_title": "Пёрселл, Генри",
-        "image": "https://upload.wikimedia.org/wikipedia/commons/thumb/5/51/Henry_Purcell.jpg/400px-Henry_Purcell.jpg"
+        "wiki_title": "Пёрселл, Генри"
     },
     "рамо": {
         "era": "baroque",
@@ -199,8 +190,7 @@ COMPOSERS_DB = {
         "full_name": "Жан-Филипп Рамо",
         "bio": "Французский композитор и теоретик музыки. Реформатор французской оперы.",
         "wiki": "https://ru.wikipedia.org/wiki/Рамо,_Жан-Филипп",
-        "wiki_title": "Рамо, Жан-Филипп",
-        "image": "https://upload.wikimedia.org/wikipedia/commons/thumb/3/3d/Jean-Philippe_Rameau.jpg/400px-Jean-Philippe_Rameau.jpg"
+        "wiki_title": "Рамо, Жан-Филипп"
     },
     "пахельбель": {
         "era": "baroque",
@@ -209,8 +199,7 @@ COMPOSERS_DB = {
         "full_name": "Иоганн Пахельбель",
         "bio": "Немецкий органист и композитор. Автор знаменитого «Канона ре-мажор».",
         "wiki": "https://ru.wikipedia.org/wiki/Пахельбель,_Иоганн",
-        "wiki_title": "Пахельбель, Иоганн",
-        "image": "https://upload.wikimedia.org/wikipedia/commons/thumb/9/9b/Pachelbel.jpg/400px-Pachelbel.jpg"
+        "wiki_title": "Пахельбель, Иоганн"
     },
     "альбинони": {
         "era": "baroque",
@@ -219,8 +208,7 @@ COMPOSERS_DB = {
         "full_name": "Томазо Джованни Альбинони",
         "bio": "Итальянский композитор эпохи барокко.",
         "wiki": "https://ru.wikipedia.org/wiki/Альбинони,_Томазо",
-        "wiki_title": "Альбинони, Томазо",
-        "image": "https://upload.wikimedia.org/wikipedia/commons/thumb/4/4c/Tomaso_Albinoni.jpg/400px-Tomaso_Albinoni.jpg"
+        "wiki_title": "Альбинони, Томазо"
     },
     "тартини": {
         "era": "baroque",
@@ -229,28 +217,7 @@ COMPOSERS_DB = {
         "full_name": "Джузеппе Тартини",
         "bio": "Итальянский скрипач и композитор. Автор «Дьявольских трелей».",
         "wiki": "https://ru.wikipedia.org/wiki/Тартини,_Джузеппе",
-        "wiki_title": "Тартини, Джузеппе",
-        "image": "https://upload.wikimedia.org/wikipedia/commons/thumb/4/41/Tartini.jpg/400px-Tartini.jpg"
-    },
-    "люлли": {
-        "era": "baroque",
-        "birth": 1632,
-        "death": 1687,
-        "full_name": "Жан-Батист Люлли",
-        "bio": "Французский композитор, создатель французской оперной традиции.",
-        "wiki": "https://ru.wikipedia.org/wiki/Люлли,_Жан-Батист",
-        "wiki_title": "Люлли, Жан-Батист",
-        "image": "https://upload.wikimedia.org/wikipedia/commons/thumb/0/0b/Jean-Baptiste_Lully.jpg/400px-Jean-Baptiste_Lully.jpg"
-    },
-    "куперен": {
-        "era": "baroque",
-        "birth": 1668,
-        "death": 1733,
-        "full_name": "Франсуа Куперен",
-        "bio": "Французский композитор, клавесинист и органист. «Великий Куперен».",
-        "wiki": "https://ru.wikipedia.org/wiki/Куперен,_Франсуа",
-        "wiki_title": "Куперен, Франсуа",
-        "image": "https://upload.wikimedia.org/wikipedia/commons/thumb/7/78/Couperin.jpg/400px-Couperin.jpg"
+        "wiki_title": "Тартини, Джузеппе"
     },
     "скарлатти": {
         "era": "baroque",
@@ -259,8 +226,7 @@ COMPOSERS_DB = {
         "full_name": "Доменико Скарлатти",
         "bio": "Итальянский композитор и клавесинист. Автор более 550 сонат.",
         "wiki": "https://ru.wikipedia.org/wiki/Скарлатти,_Доменико",
-        "wiki_title": "Скарлатти, Доменико",
-        "image": "https://upload.wikimedia.org/wikipedia/commons/thumb/3/35/Domenico_Scarlatti.jpg/400px-Domenico_Scarlatti.jpg"
+        "wiki_title": "Скарлатти, Доменико"
     },
     "телеман": {
         "era": "baroque",
@@ -269,8 +235,7 @@ COMPOSERS_DB = {
         "full_name": "Георг Филипп Телеман",
         "bio": "Немецкий композитор, один из самых плодовитых в истории музыки.",
         "wiki": "https://ru.wikipedia.org/wiki/Телеман,_Георг_Филипп",
-        "wiki_title": "Телеман, Георг Филипп",
-        "image": "https://upload.wikimedia.org/wikipedia/commons/thumb/4/44/Telemann.jpg/400px-Telemann.jpg"
+        "wiki_title": "Телеман, Георг Филипп"
     },
     
     # ============================================================
@@ -283,8 +248,7 @@ COMPOSERS_DB = {
         "full_name": "Вольфганг Амадей Моцарт",
         "bio": "Великий австрийский композитор, представитель венской классической школы.",
         "wiki": "https://ru.wikipedia.org/wiki/Моцарт,_Вольфганг_Амадей",
-        "wiki_title": "Моцарт, Вольфганг Амадей",
-        "image": "https://upload.wikimedia.org/wikipedia/commons/thumb/5/5c/Wolfgang_Amadeus_Mozart_2.jpg/400px-Wolfgang_Amadeus_Mozart_2.jpg"
+        "wiki_title": "Моцарт, Вольфганг Амадей"
     },
     "бетховен": {
         "era": "classical",
@@ -293,8 +257,7 @@ COMPOSERS_DB = {
         "full_name": "Людвиг ван Бетховен",
         "bio": "Великий немецкий композитор, последний представитель венской классической школы.",
         "wiki": "https://ru.wikipedia.org/wiki/Бетховен,_Людвиг_ван",
-        "wiki_title": "Бетховен, Людвиг ван",
-        "image": "https://upload.wikimedia.org/wikipedia/commons/thumb/6/6f/Beethoven.jpg/400px-Beethoven.jpg"
+        "wiki_title": "Бетховен, Людвиг ван"
     },
     "гайдн": {
         "era": "classical",
@@ -303,8 +266,7 @@ COMPOSERS_DB = {
         "full_name": "Йозеф Гайдн",
         "bio": "Австрийский композитор, основоположник венской классической школы.",
         "wiki": "https://ru.wikipedia.org/wiki/Гайдн,_Йозеф",
-        "wiki_title": "Гайдн, Йозеф",
-        "image": "https://upload.wikimedia.org/wikipedia/commons/thumb/5/5a/Joseph_Haydn.jpg/400px-Joseph_Haydn.jpg"
+        "wiki_title": "Гайдн, Йозеф"
     },
     "глюк": {
         "era": "classical",
@@ -313,8 +275,7 @@ COMPOSERS_DB = {
         "full_name": "Кристоф Виллибальд Глюк",
         "bio": "Немецкий композитор, реформатор оперного жанра.",
         "wiki": "https://ru.wikipedia.org/wiki/Глюк,_Кристоф_Виллибальд",
-        "wiki_title": "Глюк, Кристоф Виллибальд",
-        "image": "https://upload.wikimedia.org/wikipedia/commons/thumb/4/47/Gluck.jpg/400px-Gluck.jpg"
+        "wiki_title": "Глюк, Кристоф Виллибальд"
     },
     "сальери": {
         "era": "classical",
@@ -323,8 +284,7 @@ COMPOSERS_DB = {
         "full_name": "Антонио Сальери",
         "bio": "Итальянский и австрийский композитор, педагог. Учитель Бетховена и Шуберта.",
         "wiki": "https://ru.wikipedia.org/wiki/Сальери,_Антонио",
-        "wiki_title": "Сальери, Антонио",
-        "image": "https://upload.wikimedia.org/wikipedia/commons/thumb/d/d0/Salieri.jpg/400px-Salieri.jpg"
+        "wiki_title": "Сальери, Антонио"
     },
     
     # ============================================================
@@ -337,8 +297,7 @@ COMPOSERS_DB = {
         "full_name": "Франц Петер Шуберт",
         "bio": "Австрийский композитор, основоположник романтизма в музыке.",
         "wiki": "https://ru.wikipedia.org/wiki/Шуберт,_Франц",
-        "wiki_title": "Шуберт, Франц",
-        "image": "https://upload.wikimedia.org/wikipedia/commons/thumb/5/57/Schubert.jpg/400px-Schubert.jpg"
+        "wiki_title": "Шуберт, Франц"
     },
     "глинка": {
         "era": "romantic",
@@ -347,8 +306,7 @@ COMPOSERS_DB = {
         "full_name": "Михаил Иванович Глинка",
         "bio": "Великий русский композитор, основоположник русской классической музыки.",
         "wiki": "https://ru.wikipedia.org/wiki/Глинка,_Михаил_Иванович",
-        "wiki_title": "Глинка, Михаил Иванович",
-        "image": "https://upload.wikimedia.org/wikipedia/commons/thumb/a/a7/Mikhail_Glinka.jpg/400px-Mikhail_Glinka.jpg"
+        "wiki_title": "Глинка, Михаил Иванович"
     },
     "шопен": {
         "era": "romantic",
@@ -357,8 +315,7 @@ COMPOSERS_DB = {
         "full_name": "Фредерик Шопен",
         "bio": "Великий польский композитор, пианист-виртуоз. Поэзия фортепиано.",
         "wiki": "https://ru.wikipedia.org/wiki/Шопен,_Фредерик",
-        "wiki_title": "Шопен, Фредерик",
-        "image": "https://upload.wikimedia.org/wikipedia/commons/thumb/7/7c/Frederic_Chopin.jpg/400px-Frederic_Chopin.jpg"
+        "wiki_title": "Шопен, Фредерик"
     },
     "шuman": {
         "era": "romantic",
@@ -367,8 +324,7 @@ COMPOSERS_DB = {
         "full_name": "Роберт Шуман",
         "bio": "Немецкий композитор, пианист, музыкальный критик.",
         "wiki": "https://ru.wikipedia.org/wiki/Шуман,_Роберт",
-        "wiki_title": "Шуман, Роберт",
-        "image": "https://upload.wikimedia.org/wikipedia/commons/thumb/4/49/Robert_Schumann.jpg/400px-Robert_Schumann.jpg"
+        "wiki_title": "Шуман, Роберт"
     },
     "лист": {
         "era": "romantic",
@@ -377,8 +333,7 @@ COMPOSERS_DB = {
         "full_name": "Ференц Лист",
         "bio": "Венгерский композитор, пианист-виртуоз. Создатель жанра симфонической поэмы.",
         "wiki": "https://ru.wikipedia.org/wiki/Лист,_Ференц",
-        "wiki_title": "Лист, Ференц",
-        "image": "https://upload.wikimedia.org/wikipedia/commons/thumb/3/34/Liszt.jpg/400px-Liszt.jpg"
+        "wiki_title": "Лист, Ференц"
     },
     "вагнер": {
         "era": "romantic",
@@ -387,8 +342,7 @@ COMPOSERS_DB = {
         "full_name": "Рихард Вагнер",
         "bio": "Немецкий композитор, реформатор оперного жанра.",
         "wiki": "https://ru.wikipedia.org/wiki/Вагнер,_Рихард",
-        "wiki_title": "Вагнер, Рихард",
-        "image": "https://upload.wikimedia.org/wikipedia/commons/thumb/2/2c/Richard_Wagner.jpg/400px-Richard_Wagner.jpg"
+        "wiki_title": "Вагнер, Рихард"
     },
     "верди": {
         "era": "romantic",
@@ -397,8 +351,7 @@ COMPOSERS_DB = {
         "full_name": "Джузеппе Верди",
         "bio": "Великий итальянский композитор, вершина оперного жанра.",
         "wiki": "https://ru.wikipedia.org/wiki/Верди,_Джузеппе",
-        "wiki_title": "Верди, Джузеппе",
-        "image": "https://upload.wikimedia.org/wikipedia/commons/thumb/1/1e/Giuseppe_Verdi.jpg/400px-Giuseppe_Verdi.jpg"
+        "wiki_title": "Верди, Джузеппе"
     },
     "берлиоз": {
         "era": "romantic",
@@ -407,8 +360,7 @@ COMPOSERS_DB = {
         "full_name": "Гектор Берлиоз",
         "bio": "Французский композитор, дирижёр. Крупнейший представитель французского романтизма.",
         "wiki": "https://ru.wikipedia.org/wiki/Берлиоз,_Гектор",
-        "wiki_title": "Берлиоз, Гектор",
-        "image": "https://upload.wikimedia.org/wikipedia/commons/thumb/9/94/Berlioz.jpg/400px-Berlioz.jpg"
+        "wiki_title": "Берлиоз, Гектор"
     },
     "мендельсон": {
         "era": "romantic",
@@ -417,8 +369,7 @@ COMPOSERS_DB = {
         "full_name": "Феликс Мендельсон-Бартольди",
         "bio": "Немецкий композитор и дирижёр. Возродил музыку Баха.",
         "wiki": "https://ru.wikipedia.org/wiki/Мендельсон,_Феликс",
-        "wiki_title": "Мендельсон, Феликс",
-        "image": "https://upload.wikimedia.org/wikipedia/commons/thumb/b/b3/Mendelssohn.jpg/400px-Mendelssohn.jpg"
+        "wiki_title": "Мендельсон, Феликс"
     },
     "брамс": {
         "era": "romantic",
@@ -427,8 +378,7 @@ COMPOSERS_DB = {
         "full_name": "Иоганнес Брамс",
         "bio": "Немецкий композитор, один из главных представителей романтизма.",
         "wiki": "https://ru.wikipedia.org/wiki/Брамс,_Иоганнес",
-        "wiki_title": "Брамс, Иоганнес",
-        "image": "https://upload.wikimedia.org/wikipedia/commons/thumb/6/6d/Brahms.jpg/400px-Brahms.jpg"
+        "wiki_title": "Брамс, Иоганнес"
     },
     "бизе": {
         "era": "romantic",
@@ -437,8 +387,7 @@ COMPOSERS_DB = {
         "full_name": "Жорж Бизе",
         "bio": "Французский композитор, автор оперы «Кармен».",
         "wiki": "https://ru.wikipedia.org/wiki/Бизе,_Жорж",
-        "wiki_title": "Бизе, Жорж",
-        "image": "https://upload.wikimedia.org/wikipedia/commons/thumb/1/1f/Georges_Bizet.jpg/400px-Georges_Bizet.jpg"
+        "wiki_title": "Бизе, Жорж"
     },
     "муссоргский": {
         "era": "romantic",
@@ -447,8 +396,7 @@ COMPOSERS_DB = {
         "full_name": "Модест Петрович Мусоргский",
         "bio": "Русский композитор, член «Могучей кучки».",
         "wiki": "https://ru.wikipedia.org/wiki/Мусоргский,_Модест_Петрович",
-        "wiki_title": "Мусоргский, Модест Петрович",
-        "image": "https://upload.wikimedia.org/wikipedia/commons/thumb/4/49/Musorgsky.jpg/400px-Musorgsky.jpg"
+        "wiki_title": "Мусоргский, Модест Петрович"
     },
     "чайковский": {
         "era": "romantic",
@@ -457,8 +405,7 @@ COMPOSERS_DB = {
         "full_name": "Пётр Ильич Чайковский",
         "bio": "Великий русский композитор. Балеты «Лебединое озеро», «Щелкунчик».",
         "wiki": "https://ru.wikipedia.org/wiki/Чайковский,_Пётр_Ильич",
-        "wiki_title": "Чайковский, Пётр Ильич",
-        "image": "https://upload.wikimedia.org/wikipedia/commons/thumb/6/63/Tchaikovsky.jpg/400px-Tchaikovsky.jpg"
+        "wiki_title": "Чайковский, Пётр Ильич"
     },
     "дворжак": {
         "era": "romantic",
@@ -467,8 +414,7 @@ COMPOSERS_DB = {
         "full_name": "Антонин Леопольд Дворжак",
         "bio": "Чешский композитор, один из крупнейших представителей романтизма.",
         "wiki": "https://ru.wikipedia.org/wiki/Дворжак,_Антонин",
-        "wiki_title": "Дворжак, Антонин",
-        "image": "https://upload.wikimedia.org/wikipedia/commons/thumb/a/a9/Dvorak.jpg/400px-Dvorak.jpg"
+        "wiki_title": "Дворжак, Антонин"
     },
     "григ": {
         "era": "romantic",
@@ -477,8 +423,7 @@ COMPOSERS_DB = {
         "full_name": "Эдвард Хагеруп Григ",
         "bio": "Норвежский композитор. Музыка к драме «Пер Гюнт».",
         "wiki": "https://ru.wikipedia.org/wiki/Григ,_Эдвард",
-        "wiki_title": "Григ, Эдвард",
-        "image": "https://upload.wikimedia.org/wikipedia/commons/thumb/5/5c/Edvard_Grieg.jpg/400px-Edvard_Grieg.jpg"
+        "wiki_title": "Григ, Эдвард"
     },
     "римский-корсаков": {
         "era": "romantic",
@@ -487,8 +432,7 @@ COMPOSERS_DB = {
         "full_name": "Николай Андреевич Римский-Корсаков",
         "bio": "Русский композитор, педагог, дирижёр. Мастер оркестровой палитры.",
         "wiki": "https://ru.wikipedia.org/wiki/Римский-Корсаков,_Николай_Андреевич",
-        "wiki_title": "Римский-Корсаков, Николай Андреевич",
-        "image": "https://upload.wikimedia.org/wikipedia/commons/thumb/3/35/Rimsky-Korsakov.jpg/400px-Rimsky-Korsakov.jpg"
+        "wiki_title": "Римский-Корсаков, Николай Андреевич"
     },
     "бородин": {
         "era": "romantic",
@@ -497,8 +441,7 @@ COMPOSERS_DB = {
         "full_name": "Александр Порфирьевич Бородин",
         "bio": "Русский композитор и учёный-химик. Опера «Князь Игорь».",
         "wiki": "https://ru.wikipedia.org/wiki/Бородин,_Александр_Порфирьевич",
-        "wiki_title": "Бородин, Александр Порфирьевич",
-        "image": "https://upload.wikimedia.org/wikipedia/commons/thumb/3/32/Alexander_Borodin.jpg/400px-Alexander_Borodin.jpg"
+        "wiki_title": "Бородин, Александр Порфирьевич"
     },
     "малер": {
         "era": "romantic",
@@ -507,8 +450,7 @@ COMPOSERS_DB = {
         "full_name": "Густав Малер",
         "bio": "Австрийский композитор, один из крупнейших представителей позднего романтизма.",
         "wiki": "https://ru.wikipedia.org/wiki/Малер,_Густав",
-        "wiki_title": "Малер, Густав",
-        "image": "https://upload.wikimedia.org/wikipedia/commons/thumb/2/27/Gustav_Mahler.jpg/400px-Gustav_Mahler.jpg"
+        "wiki_title": "Малер, Густав"
     },
     "рахманинов": {
         "era": "romantic",
@@ -517,8 +459,7 @@ COMPOSERS_DB = {
         "full_name": "Сергей Васильевич Рахманинов",
         "bio": "Великий русский композитор, пианист и дирижёр.",
         "wiki": "https://ru.wikipedia.org/wiki/Рахманинов,_Сергей_Васильевич",
-        "wiki_title": "Рахманинов, Сергей Васильевич",
-        "image": "https://upload.wikimedia.org/wikipedia/commons/thumb/b/bd/Rachmaninoff.jpg/400px-Rachmaninoff.jpg"
+        "wiki_title": "Рахманинов, Сергей Васильевич"
     },
     "скрябин": {
         "era": "romantic",
@@ -527,8 +468,7 @@ COMPOSERS_DB = {
         "full_name": "Александр Николаевич Скрябин",
         "bio": "Русский композитор и пианист. Уникальный синтез романтизма и символизма.",
         "wiki": "https://ru.wikipedia.org/wiki/Скрябин,_Александр_Николаевич",
-        "wiki_title": "Скрябин, Александр Николаевич",
-        "image": "https://upload.wikimedia.org/wikipedia/commons/thumb/7/72/Scriabin.jpg/400px-Scriabin.jpg"
+        "wiki_title": "Скрябин, Александр Николаевич"
     },
     "сибелиус": {
         "era": "romantic",
@@ -537,8 +477,7 @@ COMPOSERS_DB = {
         "full_name": "Ян Сибелиус",
         "bio": "Финский композитор. Символ финской национальной музыки.",
         "wiki": "https://ru.wikipedia.org/wiki/Сибелиус,_Ян",
-        "wiki_title": "Сибелиус, Ян",
-        "image": "https://upload.wikimedia.org/wikipedia/commons/thumb/a/a9/Sibelius.jpg/400px-Sibelius.jpg"
+        "wiki_title": "Сибелиус, Ян"
     },
     "пучини": {
         "era": "romantic",
@@ -547,8 +486,7 @@ COMPOSERS_DB = {
         "full_name": "Джакомо Пуччини",
         "bio": "Итальянский оперный композитор. «Богема», «Тоска», «Мадам Баттерфляй».",
         "wiki": "https://ru.wikipedia.org/wiki/Пуччини,_Джакомо",
-        "wiki_title": "Пуччини, Джакомо",
-        "image": "https://upload.wikimedia.org/wikipedia/commons/thumb/8/8d/Giacomo_Puccini.jpg/400px-Giacomo_Puccini.jpg"
+        "wiki_title": "Пуччини, Джакомо"
     },
     "штраус": {
         "era": "romantic",
@@ -557,8 +495,7 @@ COMPOSERS_DB = {
         "full_name": "Рихард Штраус",
         "bio": "Немецкий композитор и дирижёр позднего романтизма.",
         "wiki": "https://ru.wikipedia.org/wiki/Штраус,_Рихард",
-        "wiki_title": "Штраус, Рихард",
-        "image": "https://upload.wikimedia.org/wikipedia/commons/thumb/8/8c/Richard_Strauss.jpg/400px-Richard_Strauss.jpg"
+        "wiki_title": "Штраус, Рихард"
     },
     
     # ============================================================
@@ -571,8 +508,7 @@ COMPOSERS_DB = {
         "full_name": "Клод Ашиль Дебюсси",
         "bio": "Французский композитор, основоположник музыкального импрессионизма.",
         "wiki": "https://ru.wikipedia.org/wiki/Дебюсси,_Клод",
-        "wiki_title": "Дебюсси, Клод",
-        "image": "https://upload.wikimedia.org/wikipedia/commons/thumb/5/5b/Debussy.jpg/400px-Debussy.jpg"
+        "wiki_title": "Дебюсси, Клод"
     },
     "сати": {
         "era": "modern",
@@ -581,8 +517,7 @@ COMPOSERS_DB = {
         "full_name": "Эрик Альфред Лесли Сати",
         "bio": "Французский композитор, предшественник музыкального минимализма.",
         "wiki": "https://ru.wikipedia.org/wiki/Сати,_Эрик",
-        "wiki_title": "Сати, Эрик",
-        "image": "https://upload.wikimedia.org/wikipedia/commons/thumb/8/8f/Satie.jpg/400px-Satie.jpg"
+        "wiki_title": "Сати, Эрик"
     },
     "равель": {
         "era": "modern",
@@ -591,28 +526,7 @@ COMPOSERS_DB = {
         "full_name": "Морис Равель",
         "bio": "Французский композитор-импрессионист. Его «Болеро» — мировое признание.",
         "wiki": "https://ru.wikipedia.org/wiki/Равель,_Морис",
-        "wiki_title": "Равель, Морис",
-        "image": "https://upload.wikimedia.org/wikipedia/commons/thumb/0/0a/Ravel.jpg/400px-Ravel.jpg"
-    },
-    "фаля": {
-        "era": "modern",
-        "birth": 1876,
-        "death": 1946,
-        "full_name": "Мануэль де Фалья",
-        "bio": "Испанский композитор, вершина испанского музыкального модерна.",
-        "wiki": "https://ru.wikipedia.org/wiki/Фалья,_Мануэль_де",
-        "wiki_title": "Фалья, Мануэль де",
-        "image": "https://upload.wikimedia.org/wikipedia/commons/thumb/d/d6/Falla.jpg/400px-Falla.jpg"
-    },
-    "респиги": {
-        "era": "modern",
-        "birth": 1879,
-        "death": 1936,
-        "full_name": "Отторино Респиги",
-        "bio": "Итальянский композитор, автор симфонических поэм о Риме.",
-        "wiki": "https://ru.wikipedia.org/wiki/Респиги,_Отторино",
-        "wiki_title": "Респиги, Отторино",
-        "image": "https://upload.wikimedia.org/wikipedia/commons/thumb/4/47/Respighi.jpg/400px-Respighi.jpg"
+        "wiki_title": "Равель, Морис"
     },
     "барток": {
         "era": "modern",
@@ -621,8 +535,7 @@ COMPOSERS_DB = {
         "full_name": "Бела Барток",
         "bio": "Венгерский композитор, пианист и этномузыколог.",
         "wiki": "https://ru.wikipedia.org/wiki/Барток,_Бела",
-        "wiki_title": "Барток, Бела",
-        "image": "https://upload.wikimedia.org/wikipedia/commons/thumb/0/08/Bartok.jpg/400px-Bartok.jpg"
+        "wiki_title": "Барток, Бела"
     },
     "стравинский": {
         "era": "modern",
@@ -631,8 +544,7 @@ COMPOSERS_DB = {
         "full_name": "Игорь Фёдорович Стравинский",
         "bio": "Великий русский композитор, один из главных новаторов XX века.",
         "wiki": "https://ru.wikipedia.org/wiki/Стравинский,_Игорь_Фёдорович",
-        "wiki_title": "Стравинский, Игорь Фёдорович",
-        "image": "https://upload.wikimedia.org/wikipedia/commons/thumb/6/6e/Stravinsky.jpg/400px-Stravinsky.jpg"
+        "wiki_title": "Стравинский, Игорь Фёдорович"
     },
     "прокофьев": {
         "era": "modern",
@@ -641,8 +553,7 @@ COMPOSERS_DB = {
         "full_name": "Сергей Сергеевич Прокофьев",
         "bio": "Великий русский композитор. «Ромео и Джульетта», «Петя и волк».",
         "wiki": "https://ru.wikipedia.org/wiki/Прокофьев,_Сергей_Сергеевич",
-        "wiki_title": "Прокофьев, Сергей Сергеевич",
-        "image": "https://upload.wikimedia.org/wikipedia/commons/thumb/2/2e/Prokofiev.jpg/400px-Prokofiev.jpg"
+        "wiki_title": "Прокофьев, Сергей Сергеевич"
     },
     "копленд": {
         "era": "modern",
@@ -651,8 +562,7 @@ COMPOSERS_DB = {
         "full_name": "Аарон Копленд",
         "bio": "Американский композитор, создатель «американского звучания».",
         "wiki": "https://ru.wikipedia.org/wiki/Копленд,_Аарон",
-        "wiki_title": "Копленд, Аарон",
-        "image": "https://upload.wikimedia.org/wikipedia/commons/thumb/a/a5/Copland.jpg/400px-Copland.jpg"
+        "wiki_title": "Копленд, Аарон"
     },
     "хачатурян": {
         "era": "modern",
@@ -661,8 +571,7 @@ COMPOSERS_DB = {
         "full_name": "Арам Ильич Хачатурян",
         "bio": "Армянский советский композитор. «Танец с саблями».",
         "wiki": "https://ru.wikipedia.org/wiki/Хачатурян,_Арам_Ильич",
-        "wiki_title": "Хачатурян, Арам Ильич",
-        "image": "https://upload.wikimedia.org/wikipedia/commons/thumb/5/56/Khachaturian.jpg/400px-Khachaturian.jpg"
+        "wiki_title": "Хачатурян, Арам Ильич"
     },
     "шостакович": {
         "era": "modern",
@@ -671,8 +580,7 @@ COMPOSERS_DB = {
         "full_name": "Дмитрий Дмитриевич Шостакович",
         "bio": "Великий русский композитор. 15 симфоний — музыкальная летопись XX века.",
         "wiki": "https://ru.wikipedia.org/wiki/Шостакович,_Дмитрий_Дмитриевич",
-        "wiki_title": "Шостакович, Дмитрий Дмитриевич",
-        "image": "https://upload.wikimedia.org/wikipedia/commons/thumb/4/4c/Shostakovich.jpg/400px-Shostakovich.jpg"
+        "wiki_title": "Шостакович, Дмитрий Дмитриевич"
     },
     
     # ============================================================
@@ -685,8 +593,7 @@ COMPOSERS_DB = {
         "full_name": "Оливье Мессиан",
         "bio": "Французский композитор, органист, орнитолог.",
         "wiki": "https://ru.wikipedia.org/wiki/Мессиан,_Оливье",
-        "wiki_title": "Мессиан, Оливье",
-        "image": "https://upload.wikimedia.org/wikipedia/commons/thumb/4/4a/Messiaen.jpg/400px-Messiaen.jpg"
+        "wiki_title": "Мессиан, Оливье"
     },
     "кейдж": {
         "era": "contemporary",
@@ -695,8 +602,7 @@ COMPOSERS_DB = {
         "full_name": "Джон Милтон Кейдж",
         "bio": "Американский композитор, философ музыки. Пьеса «4'33\"».",
         "wiki": "https://ru.wikipedia.org/wiki/Кейдж,_Джон",
-        "wiki_title": "Кейдж, Джон",
-        "image": "https://upload.wikimedia.org/wikipedia/commons/thumb/5/57/Cage.jpg/400px-Cage.jpg"
+        "wiki_title": "Кейдж, Джон"
     },
     "шнитке": {
         "era": "contemporary",
@@ -705,8 +611,7 @@ COMPOSERS_DB = {
         "full_name": "Альфред Гарриевич Шнитке",
         "bio": "Русский композитор, создатель стиля «полистилистика».",
         "wiki": "https://ru.wikipedia.org/wiki/Шнитке,_Альфред_Гарриевич",
-        "wiki_title": "Шнитке, Альфред Гарриевич",
-        "image": "https://upload.wikimedia.org/wikipedia/commons/thumb/2/2b/Schnittke.jpg/400px-Schnittke.jpg"
+        "wiki_title": "Шнитке, Альфред Гарриевич"
     },
     "пярт": {
         "era": "contemporary",
@@ -715,8 +620,7 @@ COMPOSERS_DB = {
         "full_name": "Арво Пярт",
         "bio": "Эстонский композитор, создатель стиля «колокольного звона».",
         "wiki": "https://ru.wikipedia.org/wiki/Пярт,_Арво",
-        "wiki_title": "Пярт, Арво",
-        "image": "https://upload.wikimedia.org/wikipedia/commons/thumb/5/5c/Arvo_Pärt.jpg/400px-Arvo_Pärt.jpg"
+        "wiki_title": "Пярт, Арво"
     },
     "эйнауди": {
         "era": "contemporary",
@@ -725,10 +629,69 @@ COMPOSERS_DB = {
         "full_name": "Людовико Эйнауди",
         "bio": "Итальянский композитор и пианист. Один из самых исполняемых современных композиторов.",
         "wiki": "https://ru.wikipedia.org/wiki/Эйнауди,_Людовико",
-        "wiki_title": "Эйнауди, Людовико",
-        "image": "https://upload.wikimedia.org/wikipedia/commons/thumb/2/2b/Einaudi.jpg/400px-Einaudi.jpg"
+        "wiki_title": "Эйнауди, Людовико"
     },
 }
+
+# ===================== ФУНКЦИИ ДЛЯ РАБОТЫ С ФОТОГРАФИЯМИ =====================
+
+async def get_wikipedia_image(wiki_title: str) -> Optional[str]:
+    """
+    Получает URL изображения композитора через Wikipedia API
+    """
+    if not wiki_title:
+        return None
+    
+    encoded_title = urllib.parse.quote(wiki_title)
+    
+    # Первый запрос: получаем информацию о странице и изображении
+    api_url = f"https://ru.wikipedia.org/w/api.php?action=query&prop=pageimages&format=json&pithumbsize=300&titles={encoded_title}"
+    
+    try:
+        headers = {
+            'User-Agent': 'ClassicalEraBot/1.0 (https://t.me/your_bot; your_email@example.com)'
+        }
+        async with aiohttp.ClientSession() as session:
+            async with session.get(api_url, headers=headers, timeout=15) as response:
+                if response.status == 200:
+                    data = await response.json()
+                    pages = data.get("query", {}).get("pages", {})
+                    for page_id, page_data in pages.items():
+                        if "thumbnail" in page_data:
+                            image_url = page_data["thumbnail"].get("source")
+                            if image_url:
+                                # Меняем размер на больший
+                                image_url = image_url.replace("/300px-", "/400px-")
+                                return image_url
+                    return None
+                else:
+                    logger.warning(f"Ошибка Wikipedia API: {response.status}")
+                    return None
+    except Exception as e:
+        logger.warning(f"Ошибка при получении изображения: {e}")
+        return None
+
+async def download_image_as_bytes(image_url: str) -> Optional[bytes]:
+    """
+    Скачивает изображение и возвращает его как bytes
+    """
+    if not image_url:
+        return None
+    
+    try:
+        headers = {
+            'User-Agent': 'ClassicalEraBot/1.0 (https://t.me/your_bot; your_email@example.com)'
+        }
+        async with aiohttp.ClientSession() as session:
+            async with session.get(image_url, headers=headers, timeout=15) as response:
+                if response.status == 200:
+                    return await response.read()
+                else:
+                    logger.warning(f"Не удалось скачать изображение: {response.status}")
+                    return None
+    except Exception as e:
+        logger.warning(f"Ошибка при скачивании изображения: {e}")
+        return None
 
 # ===================== ВСПОМОГАТЕЛЬНЫЕ ФУНКЦИИ =====================
 
@@ -789,7 +752,7 @@ def format_years_life(composer_data: Dict) -> str:
             return f"{birth} – н.в."
     return ""
 
-def format_composer_response(composer_key: str, composer_data: Dict) -> Tuple[str, str, Dict[str, str]]:
+def format_composer_response(composer_key: str, composer_data: Dict, image_url: str = None) -> Tuple[str, str, Dict[str, str]]:
     era_key = composer_data.get("era")
     era_data = ERAS.get(era_key)
     
@@ -797,7 +760,6 @@ def format_composer_response(composer_key: str, composer_data: Dict) -> Tuple[st
     years_life = format_years_life(composer_data)
     bio = composer_data.get("bio", "Информация о композиторе уточняется.")
     wiki_link = composer_data.get("wiki", "#")
-    image_url = composer_data.get("image")
     
     message = f"""<b>{era_data['emoji']} Эпоха:</b> {era_data['name']}
 <b>📅 Период:</b> {era_data['year_start']}–{era_data['year_end']}
@@ -863,7 +825,7 @@ async def start(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
 • 🖼️ Присылаю фотографию композитора
 • 🔍 Даю ссылки на поиск в Apple Music, Яндекс Музыке и Spotify
 
-<b>В базе более 60 композиторов с фото!</b>
+<b>В базе более 60 композиторов!</b>
 
 <b>Примеры запросов:</b>
 • <i>«Бах»</i> → Иоганн Себастьян Бах
@@ -903,7 +865,7 @@ async def help_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> No
 /eras - Список всех эпох
 /composers - Все композиторы в базе
 
-<b>В базе более 60 композиторов с фото!</b>
+<b>В базе более 60 композиторов!</b>
 
 <b>Что вы получите в ответе:</b>
 • 🖼️ Фото композитора
@@ -962,8 +924,17 @@ async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE) -> 
     if composer_key and composer_data:
         era_key = composer_data.get("era")
         if era_key and ERAS.get(era_key):
+            status_message = await update.message.reply_text("🔄 Ищу информацию о композиторе...")
+            
+            # Пытаемся получить фото через Wikipedia API
+            image_url = None
+            wiki_title = composer_data.get("wiki_title")
+            if wiki_title:
+                image_url = await get_wikipedia_image(wiki_title)
+                logger.info(f"Получено фото для {composer_key}: {image_url}")
+            
             message, image_url, wiki_link, links = format_composer_response(
-                composer_key, composer_data
+                composer_key, composer_data, image_url
             )
             
             keyboard = [
@@ -980,14 +951,26 @@ async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE) -> 
             ]
             reply_markup = InlineKeyboardMarkup(keyboard)
             
+            await status_message.delete()
+            
             if image_url:
                 try:
-                    await update.message.reply_photo(
-                        photo=image_url,
-                        caption=message,
-                        parse_mode='HTML',
-                        reply_markup=reply_markup
-                    )
+                    # Скачиваем изображение и отправляем как файл
+                    image_bytes = await download_image_as_bytes(image_url)
+                    if image_bytes:
+                        await update.message.reply_photo(
+                            photo=image_bytes,
+                            caption=message,
+                            parse_mode='HTML',
+                            reply_markup=reply_markup
+                        )
+                    else:
+                        await update.message.reply_text(
+                            message,
+                            parse_mode='HTML',
+                            reply_markup=reply_markup,
+                            disable_web_page_preview=True
+                        )
                 except Exception as e:
                     logger.warning(f"Не удалось отправить фото: {e}")
                     await update.message.reply_text(
